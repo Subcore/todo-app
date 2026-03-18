@@ -1,15 +1,20 @@
 package router
 
 import (
+	_ "github.com/Subcore/todo-app-v2/docs"
 	"github.com/Subcore/todo-app-v2/internal/handler"
 	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/Subcore/todo-app-v2/internal/service"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Initialize repository
 	repo := repository.NewTodoRepository(db)
