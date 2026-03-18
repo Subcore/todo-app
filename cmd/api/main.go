@@ -6,7 +6,6 @@ import (
 
 	"github.com/Subcore/todo-app-v2/internal/config"
 	"github.com/Subcore/todo-app-v2/internal/router"
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -38,13 +37,6 @@ func main() {
 
 	// Initialize Router
 	r := router.SetupRouter(db)
-
-	// Simple health check route
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
 
 	// Get port from environment
 	port := os.Getenv("PORT")
