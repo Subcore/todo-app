@@ -22,6 +22,10 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	svc := service.NewTodoService(repo)
 	// Initialize handler
 	h := handler.NewTodoHandler(svc)
+	hh := handler.NewHealthHandler(db)
+
+	r.GET("/healthz", hh.Healthz)
+	r.GET("/readyz", hh.Readyz)
 
 	api := r.Group("/api/v1")
 	{
