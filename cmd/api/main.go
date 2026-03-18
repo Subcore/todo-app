@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/Subcore/todo-app-v2/internal/config"
+	"github.com/Subcore/todo-app-v2/internal/router"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -14,14 +16,14 @@ func main() {
 		log.Println("No .env file found, using defaults")
 	}
 
-	// Get port from environment
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Initialize DB
+	db, err := config.InitDB()
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	// Initialize Gin router
-	r := gin.Default()
+	// Initialize Router
+	r := router.SetupRouter(db)
 
 	// Simple health check route
 	r.GET("/ping", func(c *gin.Context) {
@@ -29,6 +31,12 @@ func main() {
 			"message": "pong",
 		})
 	})
+
+	// Get port from environment
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
 	// Start server
 	log.Printf("Starting server on port %s...", port)
