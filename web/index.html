@@ -110,15 +110,50 @@
                     console.error('Ошибка добавления задачи:', err);
                 }
             },
-            toggleTodo(todo) {
-                todo.completed = !todo.completed;
-                this.$nextTick(() => lucide.createIcons());
+            async toggleTodo(todo) {
+                const originalStatus = todo.completed;
+                try {
+                    // Оптимистичное обновление
+                    todo.completed = !todo.completed;
+                    
+                    const response = await fetch(`/api/v1/todos/${todo.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            title: todo.title, 
+                            completed: todo.completed 
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        // Откат в случае ошибки
+                        todo.completed = originalStatus;
+                        console.error('Не удалось обновить задачу');
+                    }
+                } catch (err) {
+                    todo.completed = originalStatus;
+                    console.error('Ошибка при переключении статуса:', err);
+                } finally {
+                    this.$nextTick(() => lucide.createIcons());
+                }
             },
-            removeTodo(id) {
-                this.todos = this.todos.filter(t => t.id !== id);
+            async removeTodo(id) {
+                try {
+                    const response = await fetch(`/api/v1/todos/${id}`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        this.todos = this.todos.filter(t => t.id !== id);
+                    }
+                } catch (err) {
+                    console.error('Ошибка при удалении задачи:', err);
+                }
             },
-            clearCompleted() {
-                this.todos = this.todos.filter(t => !t.completed);
+            async clearCompleted() {
+                const completedTodos = this.todos.filter(t => t.completed);
+                for (const todo of completedTodos) {
+                    await this.removeTodo(todo.id);
+                }
             },
             init() {
                 this.$watch('todos', () => {

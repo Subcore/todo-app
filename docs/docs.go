@@ -24,6 +24,61 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/healthz": {
+            "get": {
+                "description": "Returns 200 OK if the service is alive",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "Returns 200 OK if the service is ready to accept traffic (DB connection is active)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/todos": {
             "get": {
                 "description": "Retrieve a list of all todo items",
@@ -216,7 +271,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a todo item by its ID",
+                "description": "Delete a todo item by its ID. This is a soft delete, the record remains in the database with a deleted_at timestamp.",
                 "consumes": [
                     "application/json"
                 ],
@@ -226,7 +281,7 @@ const docTemplate = `{
                 "tags": [
                     "todos"
                 ],
-                "summary": "Delete a todo",
+                "summary": "Delete a todo (Soft Delete)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -296,6 +351,10 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "example": "2023-10-27T10:00:00Z"
                 },
                 "id": {
                     "type": "integer"
