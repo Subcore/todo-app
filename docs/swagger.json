@@ -16,64 +16,9 @@
         "version": "1.0"
     },
     "host": "localhost:8080",
-    "basePath": "/api/v1",
+    "basePath": "/",
     "paths": {
-        "/healthz": {
-            "get": {
-                "description": "Returns 200 OK if the service is alive",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Liveness probe",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/readyz": {
-            "get": {
-                "description": "Returns 200 OK if the service is ready to accept traffic (DB connection is active)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Readiness probe",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/todos": {
+        "/api/v1/todos": {
             "get": {
                 "description": "Retrieve a list of all todo items",
                 "consumes": [
@@ -158,7 +103,7 @@
                 }
             }
         },
-        "/todos/clear-completed": {
+        "/api/v1/todos/clear-completed": {
             "post": {
                 "description": "Delete all todo items that are marked as completed. This is a soft delete (using GORM's gorm.DeletedAt).",
                 "consumes": [
@@ -187,7 +132,7 @@
                 }
             }
         },
-        "/todos/deleted": {
+        "/api/v1/todos/deleted": {
             "get": {
                 "description": "Retrieve a list of all soft-deleted todo items",
                 "consumes": [
@@ -222,7 +167,7 @@
                 }
             }
         },
-        "/todos/{id}": {
+        "/api/v1/todos/{id}": {
             "get": {
                 "description": "Retrieve a todo item using its ID",
                 "consumes": [
@@ -364,6 +309,61 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "Returns 200 OK if the service is alive",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "Returns 200 OK if the service is ready to accept traffic (DB connection is active)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

@@ -48,7 +48,7 @@ type getTodosQuery struct {
 // @Success 201 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /todos [post]
+// @Router /api/v1/todos [post]
 func (h *TodoHandler) Create(c *gin.Context) {
 	var req createTodoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,7 +75,7 @@ func (h *TodoHandler) Create(c *gin.Context) {
 // @Success 200 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /todos/{id} [get]
+// @Router /api/v1/todos/{id} [get]
 func (h *TodoHandler) Get(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -101,7 +101,7 @@ func (h *TodoHandler) Get(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} model.Todo
 // @Failure 500 {object} map[string]string
-// @Router /todos [get]
+// @Router /api/v1/todos [get]
 func (h *TodoHandler) GetAll(c *gin.Context) {
 	var query getTodosQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -136,7 +136,7 @@ func (h *TodoHandler) GetAll(c *gin.Context) {
 // @Success 200 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /todos/{id} [put]
+// @Router /api/v1/todos/{id} [put]
 func (h *TodoHandler) Update(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -170,7 +170,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
 // @Success 204 "No Content"
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /todos/{id} [delete]
+// @Router /api/v1/todos/{id} [delete]
 func (h *TodoHandler) Delete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -195,7 +195,7 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 // @Produce json
 // @Success 204 "No Content"
 // @Failure 500 {object} map[string]string
-// @Router /todos/clear-completed [post]
+// @Router /api/v1/todos/clear-completed [post]
 func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
 	if err := h.svc.DeleteCompletedTodos(c.Request.Context()); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -213,7 +213,7 @@ func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
 // @Produce json
 // @Success 200 {array} model.Todo
 // @Failure 500 {object} map[string]string
-// @Router /todos/deleted [get]
+// @Router /api/v1/todos/deleted [get]
 func (h *TodoHandler) GetDeleted(c *gin.Context) {
 	todos, err := h.svc.GetDeletedTodos(c.Request.Context())
 	if err != nil {

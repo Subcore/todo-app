@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /
 definitions:
   handler.createTodoRequest:
     properties:
@@ -68,44 +68,7 @@ info:
   title: Todo App API
   version: "1.0"
 paths:
-  /healthz:
-    get:
-      description: Returns 200 OK if the service is alive
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Liveness probe
-      tags:
-      - health
-  /readyz:
-    get:
-      description: Returns 200 OK if the service is ready to accept traffic (DB connection
-        is active)
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "503":
-          description: Service Unavailable
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Readiness probe
-      tags:
-      - health
-  /todos:
+  /api/v1/todos:
     get:
       consumes:
       - application/json
@@ -161,7 +124,7 @@ paths:
       summary: Create a todo
       tags:
       - todos
-  /todos/{id}:
+  /api/v1/todos/{id}:
     delete:
       consumes:
       - application/json
@@ -263,7 +226,7 @@ paths:
       summary: Update a todo
       tags:
       - todos
-  /todos/clear-completed:
+  /api/v1/todos/clear-completed:
     post:
       consumes:
       - application/json
@@ -283,7 +246,7 @@ paths:
       summary: Delete all completed todos (Soft Delete)
       tags:
       - todos
-  /todos/deleted:
+  /api/v1/todos/deleted:
     get:
       consumes:
       - application/json
@@ -306,4 +269,41 @@ paths:
       summary: Get all deleted todos
       tags:
       - todos
+  /healthz:
+    get:
+      description: Returns 200 OK if the service is alive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Liveness probe
+      tags:
+      - health
+  /readyz:
+    get:
+      description: Returns 200 OK if the service is ready to accept traffic (DB connection
+        is active)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness probe
+      tags:
+      - health
 swagger: "2.0"
