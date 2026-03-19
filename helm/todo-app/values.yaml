@@ -1,0 +1,21 @@
+replicaCount: 2
+
+image:
+  repository: todo-api
+  tag: v1
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+database:
+  host: todo-db-postgresql
+  port: 5432
+  user: postgres
+  password: your_password
+  name: todo_db
+  sslmode: disable
+
+resources: {}
