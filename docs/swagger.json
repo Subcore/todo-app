@@ -158,6 +158,70 @@
                 }
             }
         },
+        "/todos/clear-completed": {
+            "post": {
+                "description": "Delete all todo items that are marked as completed. This is a soft delete.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "todos"
+                ],
+                "summary": "Delete all completed todos (Soft Delete)",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/todos/deleted": {
+            "get": {
+                "description": "Retrieve a list of all soft-deleted todo items",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "todos"
+                ],
+                "summary": "Get all deleted todos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Todo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/todos/{id}": {
             "get": {
                 "description": "Retrieve a todo item using its ID",
