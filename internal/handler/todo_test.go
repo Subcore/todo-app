@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/gin-gonic/gin"
@@ -15,29 +16,29 @@ import (
 
 // mockTodoService implements service.TodoService interface for testing
 type mockTodoService struct {
-	CreateTodoFunc func(ctx context.Context, title string) (*model.Todo, error)
+	CreateTodoFunc func(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error)
 	GetTodoFunc    func(ctx context.Context, id uint) (*model.Todo, error)
-	GetAllTodosFunc func(ctx context.Context) ([]model.Todo, error)
-	UpdateTodoFunc func(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error)
+	GetAllTodosFunc func(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error)
+	UpdateTodoFunc func(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error)
 	DeleteTodoFunc func(ctx context.Context, id uint) error
 	DeleteCompletedTodosFunc func(ctx context.Context) error
 	GetDeletedTodosFunc    func(ctx context.Context) ([]model.Todo, error)
 }
 
-func (m *mockTodoService) CreateTodo(ctx context.Context, title string) (*model.Todo, error) {
-	return m.CreateTodoFunc(ctx, title)
+func (m *mockTodoService) CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
+	return m.CreateTodoFunc(ctx, title, dueDate, tags)
 }
 
 func (m *mockTodoService) GetTodo(ctx context.Context, id uint) (*model.Todo, error) {
 	return m.GetTodoFunc(ctx, id)
 }
 
-func (m *mockTodoService) GetAllTodos(ctx context.Context) ([]model.Todo, error) {
-	return m.GetAllTodosFunc(ctx)
+func (m *mockTodoService) GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
+	return m.GetAllTodosFunc(ctx, filter)
 }
 
-func (m *mockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error) {
-	return m.UpdateTodoFunc(ctx, id, title, completed)
+func (m *mockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
+	return m.UpdateTodoFunc(ctx, id, title, completed, dueDate, tags)
 }
 
 func (m *mockTodoService) DeleteTodo(ctx context.Context, id uint) error {
@@ -59,8 +60,8 @@ func TestTodoHandler_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Mock service
 		mockSvc := &mockTodoService{
-			CreateTodoFunc: func(ctx context.Context, title string) (*model.Todo, error) {
-				return &model.Todo{ID: 1, Title: title, Completed: false}, nil
+			CreateTodoFunc: func(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
+				return &model.Todo{ID: 1, Title: title, Completed: false, DueDate: dueDate, Tags: tags}, nil
 			},
 		}
 		h := NewTodoHandler(mockSvc)
@@ -155,7 +156,7 @@ func TestTodoHandler_GetAll(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockSvc := &mockTodoService{
-			GetAllTodosFunc: func(ctx context.Context) ([]model.Todo, error) {
+			GetAllTodosFunc: func(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
 				return []model.Todo{{ID: 1, Title: "Todo 1"}, {ID: 2, Title: "Todo 2"}}, nil
 			},
 		}
@@ -180,8 +181,8 @@ func TestTodoHandler_Update(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockSvc := &mockTodoService{
-			UpdateTodoFunc: func(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error) {
-				return &model.Todo{ID: id, Title: title, Completed: completed}, nil
+			UpdateTodoFunc: func(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
+				return &model.Todo{ID: id, Title: title, Completed: completed, DueDate: dueDate, Tags: tags}, nil
 			},
 		}
 		h := NewTodoHandler(mockSvc)
