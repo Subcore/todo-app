@@ -166,7 +166,7 @@ const docTemplate = `{
         },
         "/todos/clear-completed": {
             "post": {
-                "description": "Delete all todo items that are marked as completed. This is a soft delete.",
+                "description": "Delete all todo items that are marked as completed. This is a soft delete (using GORM's gorm.DeletedAt).",
                 "consumes": [
                     "application/json"
                 ],
@@ -335,7 +335,7 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Delete a todo item by its ID. This is a soft delete, the record remains in the database with a deleted_at timestamp.",
+                "description": "Delete a todo item by its ID. This is a soft delete (using GORM's gorm.DeletedAt). The record remains in the database with a deleted_at timestamp.",
                 "consumes": [
                     "application/json"
                 ],

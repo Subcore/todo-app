@@ -162,7 +162,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
 
 // Delete godoc
 // @Summary Delete a todo (Soft Delete)
-// @Description Delete a todo item by its ID. This is a soft delete, the record remains in the database with a deleted_at timestamp.
+// @Description Delete a todo item by its ID. This is a soft delete (using GORM's gorm.DeletedAt). The record remains in the database with a deleted_at timestamp.
 // @Tags todos
 // @Accept json
 // @Produce json
@@ -189,7 +189,7 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 
 // DeleteCompleted godoc
 // @Summary Delete all completed todos (Soft Delete)
-// @Description Delete all todo items that are marked as completed. This is a soft delete.
+// @Description Delete all todo items that are marked as completed. This is a soft delete (using GORM's gorm.DeletedAt).
 // @Tags todos
 // @Accept json
 // @Produce json
