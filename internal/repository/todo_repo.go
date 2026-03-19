@@ -65,10 +65,14 @@ func (r *todoRepository) Update(ctx context.Context, todo *model.Todo) error {
 	return r.db.WithContext(ctx).Save(todo).Error
 }
 
+// Delete performs a soft delete of a todo item by its ID.
+// This is a soft delete because the model.Todo struct contains gorm.DeletedAt.
 func (r *todoRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&model.Todo{}, id).Error
 }
 
+// DeleteCompleted performs a soft delete of all todo items marked as completed.
+// This is a soft delete because the model.Todo struct contains gorm.DeletedAt.
 func (r *todoRepository) DeleteCompleted(ctx context.Context) error {
 	return r.db.WithContext(ctx).Where("completed = ?", true).Delete(&model.Todo{}).Error
 }
