@@ -20,6 +20,8 @@ type mockTodoService struct {
 	GetAllTodosFunc func(ctx context.Context) ([]model.Todo, error)
 	UpdateTodoFunc func(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error)
 	DeleteTodoFunc func(ctx context.Context, id uint) error
+	DeleteCompletedTodosFunc func(ctx context.Context) error
+	GetDeletedTodosFunc    func(ctx context.Context) ([]model.Todo, error)
 }
 
 func (m *mockTodoService) CreateTodo(ctx context.Context, title string) (*model.Todo, error) {
@@ -40,6 +42,14 @@ func (m *mockTodoService) UpdateTodo(ctx context.Context, id uint, title string,
 
 func (m *mockTodoService) DeleteTodo(ctx context.Context, id uint) error {
 	return m.DeleteTodoFunc(ctx, id)
+}
+
+func (m *mockTodoService) DeleteCompletedTodos(ctx context.Context) error {
+	return m.DeleteCompletedTodosFunc(ctx)
+}
+
+func (m *mockTodoService) GetDeletedTodos(ctx context.Context) ([]model.Todo, error) {
+	return m.GetDeletedTodosFunc(ctx)
 }
 
 func TestTodoHandler_Create(t *testing.T) {
@@ -214,5 +224,53 @@ func TestTodoHandler_Delete(t *testing.T) {
 		h.Delete(c)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
+	})
+}
+
+func TestTodoHandler_DeleteCompleted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("success", func(t *testing.T) {
+		mockSvc := &mockTodoService{
+			DeleteCompletedTodosFunc: func(ctx context.Context) error {
+				return nil
+			},
+		}
+		h := NewTodoHandler(mockSvc)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		c.Request = httptest.NewRequest(http.MethodPost, "/todos/clear-completed", nil)
+
+		h.DeleteCompleted(c)
+
+		assert.Equal(t, http.StatusNoContent, w.Code)
+	})
+}
+
+func TestTodoHandler_GetDeleted(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("success", func(t *testing.T) {
+		mockSvc := &mockTodoService{
+			GetDeletedTodosFunc: func(ctx context.Context) ([]model.Todo, error) {
+				return []model.Todo{{ID: 1, Title: "Deleted Todo 1"}}, nil
+			},
+		}
+		h := NewTodoHandler(mockSvc)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		c.Request = httptest.NewRequest(http.MethodGet, "/todos/deleted", nil)
+
+		h.GetDeleted(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var resp []model.Todo
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		assert.Len(t, resp, 1)
+		assert.Equal(t, "Deleted Todo 1", resp[0].Title)
 	})
 }

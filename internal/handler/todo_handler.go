@@ -160,3 +160,40 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, nil)
 }
+
+// DeleteCompleted godoc
+// @Summary Delete all completed todos (Soft Delete)
+// @Description Delete all todo items that are marked as completed. This is a soft delete.
+// @Tags todos
+// @Accept json
+// @Produce json
+// @Success 204 "No Content"
+// @Failure 500 {object} map[string]string
+// @Router /todos/clear-completed [post]
+func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
+	if err := h.svc.DeleteCompletedTodos(c.Request.Context()); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
+}
+
+// GetDeleted godoc
+// @Summary Get all deleted todos
+// @Description Retrieve a list of all soft-deleted todo items
+// @Tags todos
+// @Accept json
+// @Produce json
+// @Success 200 {array} model.Todo
+// @Failure 500 {object} map[string]string
+// @Router /todos/deleted [get]
+func (h *TodoHandler) GetDeleted(c *gin.Context) {
+	todos, err := h.svc.GetDeletedTodos(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, todos)
+}

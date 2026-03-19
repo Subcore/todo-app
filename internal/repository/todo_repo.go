@@ -13,6 +13,8 @@ type TodoRepository interface {
 	GetAll(ctx context.Context) ([]model.Todo, error)
 	Update(ctx context.Context, todo *model.Todo) error
 	Delete(ctx context.Context, id uint) error
+	DeleteCompleted(ctx context.Context) error
+	GetDeleted(ctx context.Context) ([]model.Todo, error)
 }
 
 type todoRepository struct {
@@ -49,4 +51,14 @@ func (r *todoRepository) Update(ctx context.Context, todo *model.Todo) error {
 
 func (r *todoRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&model.Todo{}, id).Error
+}
+
+func (r *todoRepository) DeleteCompleted(ctx context.Context) error {
+	return r.db.WithContext(ctx).Where("completed = ?", true).Delete(&model.Todo{}).Error
+}
+
+func (r *todoRepository) GetDeleted(ctx context.Context) ([]model.Todo, error) {
+	var todos []model.Todo
+	err := r.db.WithContext(ctx).Unscoped().Where("deleted_at IS NOT NULL").Find(&todos).Error
+	return todos, err
 }
