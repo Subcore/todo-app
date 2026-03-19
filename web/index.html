@@ -129,11 +129,8 @@
                 }
             },
             async toggleTodo(todo) {
-                const originalStatus = todo.completed;
+                todo.completed = !todo.completed;
                 try {
-                    // Оптимистичное обновление
-                    todo.completed = !todo.completed;
-                    
                     const response = await fetch(`/api/v1/todos/${todo.id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -142,17 +139,14 @@
                             completed: todo.completed 
                         })
                     });
-                    
                     if (!response.ok) {
-                        // Откат в случае ошибки
-                        todo.completed = originalStatus;
-                        console.error('Не удалось обновить задачу');
+                        // В случае ошибки возвращаем локальный статус обратно
+                        todo.completed = !todo.completed;
+                        console.error('Ошибка при обновлении задачи на сервере');
                     }
                 } catch (err) {
-                    todo.completed = originalStatus;
-                    console.error('Ошибка при переключении статуса:', err);
-                } finally {
-                    this.$nextTick(() => lucide.createIcons());
+                    todo.completed = !todo.completed;
+                    console.error('Сетевая ошибка при обновлении задачи:', err);
                 }
             },
             async removeTodo(id) {
