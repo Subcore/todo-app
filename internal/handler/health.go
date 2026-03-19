@@ -36,6 +36,12 @@ func (h *HealthHandler) Healthz(c *gin.Context) {
 // @Failure 503 {object} map[string]string
 // @Router /readyz [get]
 func (h *HealthHandler) Readyz(c *gin.Context) {
+	if h.db == nil {
+		log.Printf("[Readyz] Database instance is nil")
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable"})
+		return
+	}
+
 	db, err := h.db.DB()
 	if err == nil {
 		err = db.Ping()
