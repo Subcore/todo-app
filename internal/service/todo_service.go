@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
+
 	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/Subcore/todo-app-v2/internal/repository"
 )
@@ -14,10 +16,10 @@ var (
 )
 
 type TodoService interface {
-	CreateTodo(ctx context.Context, title string) (*model.Todo, error)
+	CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error)
 	GetTodo(ctx context.Context, id uint) (*model.Todo, error)
-	GetAllTodos(ctx context.Context) ([]model.Todo, error)
-	UpdateTodo(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error)
+	GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error)
+	UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error)
 	DeleteTodo(ctx context.Context, id uint) error
 	DeleteCompletedTodos(ctx context.Context) error
 	GetDeletedTodos(ctx context.Context) ([]model.Todo, error)
@@ -31,15 +33,21 @@ func NewTodoService(repo repository.TodoRepository) TodoService {
 	return &todoService{repo: repo}
 }
 
-func (s *todoService) CreateTodo(ctx context.Context, title string) (*model.Todo, error) {
+func (s *todoService) CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return nil, ErrEmptyTitle
 	}
 
+	if tags == nil {
+		tags = []string{} // Инициализируем пустой массив вместо null
+	}
+
 	todo := &model.Todo{
 		Title:     title,
 		Completed: false,
+		DueDate:   dueDate,
+		Tags:      tags,
 	}
 
 	if err := s.repo.Create(ctx, todo); err != nil {
@@ -50,18 +58,14 @@ func (s *todoService) CreateTodo(ctx context.Context, title string) (*model.Todo
 }
 
 func (s *todoService) GetTodo(ctx context.Context, id uint) (*model.Todo, error) {
-	todo, err := s.repo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return todo, nil
+	return s.repo.GetByID(ctx, id)
 }
 
-func (s *todoService) GetAllTodos(ctx context.Context) ([]model.Todo, error) {
-	return s.repo.GetAll(ctx)
+func (s *todoService) GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
+	return s.repo.GetAll(ctx, filter)
 }
 
-func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error) {
+func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
 	todo, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -72,8 +76,14 @@ func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, com
 		return nil, ErrEmptyTitle
 	}
 
+	if tags == nil {
+		tags = []string{}
+	}
+
 	todo.Title = title
 	todo.Completed = completed
+	todo.DueDate = dueDate
+	todo.Tags = tags
 
 	if err := s.repo.Update(ctx, todo); err != nil {
 		return nil, err
