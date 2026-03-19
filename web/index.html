@@ -12,57 +12,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/assets/tailwind.config.js"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: '#6366f1',
-                        'primary-light': '#818cf8',
-                        accent: '#f43f5e',
-                        success: '#10b981',
-                        'card-bg': 'rgba(30, 41, 59, 0.7)',
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        [x-cloak] { display: none !important; }
-        
-        .glass-container {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .todo-item-enter {
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .bg-gradient-main {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        }
-
-        .gradient-text {
-            background: linear-gradient(to right, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-    </style>
+    <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body class="bg-gradient-main min-h-screen text-slate-50 flex justify-center p-8 font-sans">
     <div id="app" 
