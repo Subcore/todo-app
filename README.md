@@ -4,29 +4,17 @@
 
 ## Запуск проекта
 
-### 1. Запуск базы данных
+### 1. Запуск всей инфраструктуры (БД и API)
 
-Приложение использует PostgreSQL. Для запуска локальной базы данных выполните:
-
-```bash
-docker-compose up -d
-```
-
-Это запустит контейнер `todo-db` на порту `5432`.
-
-### 2. Применение миграций
-
-Для создания структуры таблиц в базе данных используйте `golang-migrate` через Docker (не требует локальной установки):
+Приложение и база данных настроены для работы в Docker. Для запуска выполните:
 
 ```bash
-docker run --rm -v $(pwd)/migrations:/migrations --network todo-app-v2_default migrate/migrate -path=/migrations/ -database "postgres://postgres:postgres@todo-db:5432/todo_db?sslmode=disable" up
+docker-compose up --build -d
 ```
 
-### 3. Запуск приложения
-
-```bash
-go run cmd/api/main.go
-```
+Это запустит:
+- Контейнер `todo-db` на порту `5432`.
+- Контейнер `todo-api` на порту `8080`.
 
 Приложение будет доступно по адресу `http://localhost:8080`.
 ### 4. Swagger документация
