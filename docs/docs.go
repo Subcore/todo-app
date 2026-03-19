@@ -414,10 +414,13 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "created_at": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2023-10-27T10:00:00Z"
                 },
                 "deleted_at": {
                     "type": "string",
+                    "format": "date-time",
                     "example": "2023-10-27T10:00:00Z"
                 },
                 "id": {
@@ -427,7 +430,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2023-10-27T10:00:00Z"
                 }
             }
         }
