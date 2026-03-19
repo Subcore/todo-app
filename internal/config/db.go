@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Subcore/todo-app-v2/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -23,10 +22,6 @@ func InitDB() (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
-	}
-
-	if err := db.AutoMigrate(&model.Todo{}); err != nil {
-		return nil, fmt.Errorf("failed to auto-migrate: %v", err)
 	}
 
 	return db, nil
