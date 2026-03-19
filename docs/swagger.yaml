@@ -22,6 +22,9 @@ definitions:
         type: boolean
       created_at:
         type: string
+      deleted_at:
+        example: "2023-10-27T10:00:00Z"
+        type: string
       id:
         type: integer
       title:
@@ -43,6 +46,43 @@ info:
   title: Todo App API
   version: "1.0"
 paths:
+  /healthz:
+    get:
+      description: Returns 200 OK if the service is alive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Liveness probe
+      tags:
+      - health
+  /readyz:
+    get:
+      description: Returns 200 OK if the service is ready to accept traffic (DB connection
+        is active)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Readiness probe
+      tags:
+      - health
   /todos:
     get:
       consumes:
@@ -103,7 +143,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Delete a todo item by its ID
+      description: Delete a todo item by its ID. This is a soft delete, the record
+        remains in the database with a deleted_at timestamp.
       parameters:
       - description: Todo ID
         in: path
@@ -127,7 +168,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Delete a todo
+      summary: Delete a todo (Soft Delete)
       tags:
       - todos
     get:

@@ -135,8 +135,8 @@ func (h *TodoHandler) Update(c *gin.Context) {
 }
 
 // Delete godoc
-// @Summary Delete a todo
-// @Description Delete a todo item by its ID
+// @Summary Delete a todo (Soft Delete)
+// @Description Delete a todo item by its ID. This is a soft delete, the record remains in the database with a deleted_at timestamp.
 // @Tags todos
 // @Accept json
 // @Produce json
