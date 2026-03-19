@@ -29,4 +29,10 @@ go run cmd/api/main.go
 ```
 
 Приложение будет доступно по адресу `http://localhost:8080`.
-Swagger документация: `http://localhost:8080/swagger/index.html`
+### 4. Swagger документация
+
+- **Просмотр**: `http://localhost:8080/swagger/index.html` (после запуска приложения)
+- **Обновление**: если вы изменили аннотации или модели данных, обновите документацию командой:
+  ```bash
+  swag init -g cmd/api/main.go
+  ```
