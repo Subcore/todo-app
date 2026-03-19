@@ -83,5 +83,16 @@ func main() {
 		log.Fatal("Server forced to shutdown:", err)
 	}
 
+	// Close database connection
+	sqlDB, err := db.DB()
+	if err == nil {
+		log.Println("Closing database connection pool...")
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	} else {
+		log.Printf("Error getting sql.DB: %v", err)
+	}
+
 	log.Println("Server exiting")
 }

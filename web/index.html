@@ -181,12 +181,14 @@
                 if (completed.length === 0) return;
 
                 try {
-                    await Promise.all(completed.map(todo => 
-                        fetch(`/api/v1/todos/${todo.id}`, { method: 'DELETE' })
-                    ));
+                    const response = await fetch('/api/v1/todos/clear-completed', {
+                        method: 'POST'
+                    });
                     
-                    this.todos = this.todos.filter(t => !t.completed);
-                    if (this.showTrash) await this.fetchDeletedTodos();
+                    if (response.ok) {
+                        this.todos = this.todos.filter(t => !t.completed);
+                        if (this.showTrash) await this.fetchDeletedTodos();
+                    }
                 } catch (err) {
                     console.error('Ошибка при очистке выполненных задач:', err);
                 }
