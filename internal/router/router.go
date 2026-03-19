@@ -39,6 +39,8 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			todoGroup.GET("/:id", h.Get)
 			todoGroup.PUT("/:id", h.Update)
 			todoGroup.DELETE("/:id", h.Delete)
+			todoGroup.POST("/clear-completed", h.DeleteCompleted)
+			todoGroup.GET("/deleted", h.GetDeleted)
 		}
 	}
 
