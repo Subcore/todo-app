@@ -163,14 +163,16 @@
                 }
             },
             async clearCompleted() {
+                const completed = this.todos.filter(t => t.completed);
+                if (completed.length === 0) return;
+
                 try {
-                    const response = await fetch('/api/v1/todos/clear-completed', {
-                        method: 'POST'
-                    });
-                    if (response.ok) {
-                        await this.fetchTodos();
-                        if (this.showTrash) await this.fetchDeletedTodos();
-                    }
+                    await Promise.all(completed.map(todo => 
+                        fetch(`/api/v1/todos/${todo.id}`, { method: 'DELETE' })
+                    ));
+                    
+                    this.todos = this.todos.filter(t => !t.completed);
+                    if (this.showTrash) await this.fetchDeletedTodos();
                 } catch (err) {
                     console.error('Ошибка при очистке выполненных задач:', err);
                 }
