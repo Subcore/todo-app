@@ -70,8 +70,11 @@
             todos: [], 
             deletedTodos: [],
             newTodo: '', 
-            newDueDate: '',
+            newDueDate: new Date().toLocaleDateString('en-CA'),
             newTags: '',
+            getTodayDate() {
+                return new Date().toLocaleDateString('en-CA');
+            },
             filter: 'Все',
             showTrash: false,
             async fetchTodos() {
@@ -129,7 +132,7 @@
                     });
                     if (response.ok) {
                         this.newTodo = '';
-                        this.newDueDate = '';
+                        this.newDueDate = this.getTodayDate();
                         this.newTags = '';
                         await this.fetchTodos();
                     }
@@ -198,6 +201,9 @@
                     this.$nextTick(() => lucide.createIcons());
                 });
                 this.$watch('deletedTodos', () => {
+                    this.$nextTick(() => lucide.createIcons());
+                });
+                this.$watch('showTrash', () => {
                     this.$nextTick(() => lucide.createIcons());
                 });
                 lucide.createIcons();
