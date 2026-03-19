@@ -14,8 +14,19 @@ database:
   host: todo-db-postgresql
   port: 5432
   user: postgres
-  password: your_password
+  password: postgres
   name: todo_db
   sslmode: disable
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: todo.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
 
 resources: {}

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "todo-app.fullname" . }}
+  name: todo-app-service
   labels:
     {{- include "todo-app.labels" . | nindent 4 }}
 spec:
