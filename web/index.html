@@ -151,7 +151,7 @@
             },
             async removeTodo(id) {
                 try {
-                    const response = await fetch(`/api/v1/todos/${id}`, {
+                    const response = await fetch('/api/v1/todos/' + id, {
                         method: 'DELETE'
                     });
                     if (response.ok) {
