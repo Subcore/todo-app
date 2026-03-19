@@ -34,5 +34,5 @@ go run cmd/api/main.go
 - **Просмотр**: `http://localhost:8080/docs/index.html` (после запуска приложения)
 - **Обновление**: если вы изменили аннотации или модели данных, обновите документацию командой:
   ```bash
-  swag init -g cmd/api/main.go
+  swag init -g cmd/api/main.go -d ./
   ```

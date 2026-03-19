@@ -24,62 +24,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/healthz": {
-            "get": {
-                "description": "Returns 200 OK if the service is alive",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Liveness probe",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/readyz": {
-            "get": {
-                "description": "Returns 200 OK if the service is ready to accept traffic (DB connection is active)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Readiness probe",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/todos": {
+        "/api/v1/todos": {
             "get": {
                 "description": "Retrieve a list of all todo items",
                 "consumes": [
@@ -164,7 +109,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/todos/clear-completed": {
+        "/api/v1/todos/clear-completed": {
             "post": {
                 "description": "Delete all todo items that are marked as completed. This is a soft delete (using GORM's gorm.DeletedAt).",
                 "consumes": [
@@ -193,7 +138,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/todos/deleted": {
+        "/api/v1/todos/deleted": {
             "get": {
                 "description": "Retrieve a list of all soft-deleted todo items",
                 "consumes": [
@@ -228,7 +173,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/todos/{id}": {
+        "/api/v1/todos/{id}": {
             "get": {
                 "description": "Retrieve a todo item using its ID",
                 "consumes": [
@@ -379,6 +324,61 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/healthz": {
+            "get": {
+                "description": "Returns 200 OK if the service is alive",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Liveness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "Returns 200 OK if the service is ready to accept traffic (DB connection is active)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Readiness probe",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -469,7 +469,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Todo App API",
 	Description:      "This is a simple Todo application API.",
