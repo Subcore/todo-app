@@ -15,6 +15,9 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/", func(c *gin.Context) {
+		c.File("./web/index.html")
+	})
 
 	// Initialize repository
 	repo := repository.NewTodoRepository(db)
