@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/Subcore/todo-app-v2/internal/service"
@@ -18,12 +19,23 @@ func NewTodoHandler(svc service.TodoService) *TodoHandler {
 }
 
 type createTodoRequest struct {
-	Title string `json:"title" binding:"required"`
+	Title   string     `json:"title" binding:"required"`
+	DueDate *time.Time `json:"due_date"`
+	Tags    []string   `json:"tags"`
 }
 
 type updateTodoRequest struct {
-	Title     string `json:"title" binding:"required"`
-	Completed bool   `json:"completed"`
+	Title     string     `json:"title" binding:"required"`
+	Completed bool       `json:"completed"`
+	DueDate   *time.Time `json:"due_date"`
+	Tags      []string   `json:"tags"`
+}
+
+type getTodosQuery struct {
+	Completed *bool      `form:"completed"`
+	Search    string     `form:"search"`
+	DueBefore *time.Time `form:"due_before" time_format:"2006-01-02T15:04:05Z07:00"`
+	DueAfter  *time.Time `form:"due_after" time_format:"2006-01-02T15:04:05Z07:00"`
 }
 
 // Create godoc
