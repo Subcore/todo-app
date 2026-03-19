@@ -21,15 +21,20 @@ definitions:
       completed:
         type: boolean
       created_at:
+        example: "2023-10-27T10:00:00Z"
+        format: date-time
         type: string
       deleted_at:
         example: "2023-10-27T10:00:00Z"
+        format: date-time
         type: string
       id:
         type: integer
       title:
         type: string
       updated_at:
+        example: "2023-10-27T10:00:00Z"
+        format: date-time
         type: string
     type: object
 host: localhost:8080
