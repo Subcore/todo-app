@@ -19,6 +19,8 @@ type TodoService interface {
 	GetAllTodos(ctx context.Context) ([]model.Todo, error)
 	UpdateTodo(ctx context.Context, id uint, title string, completed bool) (*model.Todo, error)
 	DeleteTodo(ctx context.Context, id uint) error
+	DeleteCompletedTodos(ctx context.Context) error
+	GetDeletedTodos(ctx context.Context) ([]model.Todo, error)
 }
 
 type todoService struct {
@@ -82,4 +84,12 @@ func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, com
 
 func (s *todoService) DeleteTodo(ctx context.Context, id uint) error {
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *todoService) DeleteCompletedTodos(ctx context.Context) error {
+	return s.repo.DeleteCompleted(ctx)
+}
+
+func (s *todoService) GetDeletedTodos(ctx context.Context) ([]model.Todo, error) {
+	return s.repo.GetDeleted(ctx)
 }
