@@ -21,19 +21,24 @@ definitions:
       completed:
         type: boolean
       created_at:
-        example: "2023-10-27T10:00:00Z"
         format: date-time
         type: string
       deleted_at:
-        example: "2023-10-27T10:00:00Z"
+        format: date-time
+        type: string
+      dueDate:
+        example: "2023-12-31T23:59:59Z"
         format: date-time
         type: string
       id:
         type: integer
+      tags:
+        items:
+          type: string
+        type: array
       title:
         type: string
       updated_at:
-        example: "2023-10-27T10:00:00Z"
         format: date-time
         type: string
     type: object
