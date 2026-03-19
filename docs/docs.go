@@ -388,6 +388,15 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "due_date": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "title": {
                     "type": "string"
                 }
@@ -401,6 +410,15 @@ const docTemplate = `{
             "properties": {
                 "completed": {
                     "type": "boolean"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "title": {
                     "type": "string"
@@ -421,7 +439,7 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
-                "dueDate": {
+                "due_date": {
                     "type": "string",
                     "format": "date-time",
                     "example": "2023-12-31T23:59:59Z"
