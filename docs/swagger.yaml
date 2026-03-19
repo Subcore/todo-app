@@ -2,6 +2,12 @@ basePath: /api/v1
 definitions:
   handler.createTodoRequest:
     properties:
+      due_date:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
       title:
         type: string
     required:
@@ -11,6 +17,12 @@ definitions:
     properties:
       completed:
         type: boolean
+      due_date:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
       title:
         type: string
     required:
@@ -26,7 +38,7 @@ definitions:
       deleted_at:
         format: date-time
         type: string
-      dueDate:
+      due_date:
         example: "2023-12-31T23:59:59Z"
         format: date-time
         type: string
