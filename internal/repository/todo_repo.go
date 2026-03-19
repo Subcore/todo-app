@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+
 	"github.com/Subcore/todo-app-v2/internal/model"
 
 	"gorm.io/gorm"
@@ -10,7 +11,7 @@ import (
 type TodoRepository interface {
 	Create(ctx context.Context, todo *model.Todo) error
 	GetByID(ctx context.Context, id uint) (*model.Todo, error)
-	GetAll(ctx context.Context) ([]model.Todo, error)
+	GetAll(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error)
 	Update(ctx context.Context, todo *model.Todo) error
 	Delete(ctx context.Context, id uint) error
 	DeleteCompleted(ctx context.Context) error
@@ -37,9 +38,24 @@ func (r *todoRepository) GetByID(ctx context.Context, id uint) (*model.Todo, err
 	return &todo, nil
 }
 
-func (r *todoRepository) GetAll(ctx context.Context) ([]model.Todo, error) {
+func (r *todoRepository) GetAll(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
 	var todos []model.Todo
-	if err := r.db.WithContext(ctx).Find(&todos).Error; err != nil {
+	query := r.db.WithContext(ctx).Model(&model.Todo{})
+
+	if filter.Completed != nil {
+		query = query.Where("completed = ?", *filter.Completed)
+	}
+	if filter.Search != "" {
+		query = query.Where("title ILIKE ?", "%"+filter.Search+"%")
+	}
+	if filter.DueBefore != nil {
+		query = query.Where("due_date < ?", filter.DueBefore)
+	}
+	if filter.DueAfter != nil {
+		query = query.Where("due_date > ?", filter.DueAfter)
+	}
+
+	if err := query.Find(&todos).Error; err != nil {
 		return nil, err
 	}
 	return todos, nil

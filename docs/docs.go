@@ -415,24 +415,32 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string",
-                    "format": "date-time",
-                    "example": "2023-10-27T10:00:00Z"
+                    "format": "date-time"
                 },
                 "deleted_at": {
                     "type": "string",
+                    "format": "date-time"
+                },
+                "dueDate": {
+                    "type": "string",
                     "format": "date-time",
-                    "example": "2023-10-27T10:00:00Z"
+                    "example": "2023-12-31T23:59:59Z"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "title": {
                     "type": "string"
                 },
                 "updated_at": {
                     "type": "string",
-                    "format": "date-time",
-                    "example": "2023-10-27T10:00:00Z"
+                    "format": "date-time"
                 }
             }
         }

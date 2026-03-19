@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/Subcore/todo-app-v2/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -43,7 +44,7 @@ func (h *TodoHandler) Create(c *gin.Context) {
 		return
 	}
 
-	todo, err := h.svc.CreateTodo(c.Request.Context(), req.Title)
+	todo, err := h.svc.CreateTodo(c.Request.Context(), req.Title, req.DueDate, req.Tags)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -90,7 +91,20 @@ func (h *TodoHandler) Get(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /todos [get]
 func (h *TodoHandler) GetAll(c *gin.Context) {
-	todos, err := h.svc.GetAllTodos(c.Request.Context())
+	var query getTodosQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	filter := model.TodoFilter{
+		Completed: query.Completed,
+		Search:    query.Search,
+		DueBefore: query.DueBefore,
+		DueAfter:  query.DueAfter,
+	}
+
+	todos, err := h.svc.GetAllTodos(c.Request.Context(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -125,7 +139,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
 		return
 	}
 
-	todo, err := h.svc.UpdateTodo(c.Request.Context(), uint(id), req.Title, req.Completed)
+	todo, err := h.svc.UpdateTodo(c.Request.Context(), uint(id), req.Title, req.Completed, req.DueDate, req.Tags)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
