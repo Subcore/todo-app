@@ -27,10 +27,11 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	h := handler.NewTodoHandler(svc)
 	hh := handler.NewHealthHandler(db)
 
+	r.GET("/healthz", hh.Healthz)
+	r.GET("/readyz", hh.Readyz)
+
 	api := r.Group("/api/v1")
 	{
-		api.GET("/healthz", hh.Healthz)
-		api.GET("/readyz", hh.Readyz)
 
 		todoGroup := api.Group("/todos")
 		{
