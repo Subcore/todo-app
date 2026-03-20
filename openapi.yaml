@@ -1,0 +1,338 @@
+openapi: "3.0.3"
+info:
+  title: Todo API
+  description: RESTful API for managing todo items with soft delete support
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: todos
+    description: Todo item operations
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /api/v1/todos:
+    get:
+      tags: [todos]
+      summary: Get all todos
+      description: Retrieve a list of all active todo items with optional filters
+      operationId: getAllTodos
+      parameters:
+        - name: completed
+          in: query
+          description: Filter by completion status
+          required: false
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search todos by title (case-insensitive substring match)
+          required: false
+          schema:
+            type: string
+        - name: due_before
+          in: query
+          description: Filter todos due before this datetime (RFC3339)
+          required: false
+          schema:
+            type: string
+            format: date-time
+            example: "2024-12-31T23:59:59Z"
+        - name: due_after
+          in: query
+          description: Filter todos due after this datetime (RFC3339)
+          required: false
+          schema:
+            type: string
+            format: date-time
+            example: "2024-01-01T00:00:00Z"
+      responses:
+        "200":
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Todo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [todos]
+      summary: Create a todo
+      description: Create a new todo item with a title
+      operationId: createTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTodoRequest"
+      responses:
+        "201":
+          description: Todo created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/todos/clear-completed:
+    post:
+      tags: [todos]
+      summary: Delete all completed todos (Soft Delete)
+      description: Soft-delete all todo items that are marked as completed
+      operationId: clearCompleted
+      responses:
+        "204":
+          description: No Content
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/todos/deleted:
+    get:
+      tags: [todos]
+      summary: Get all deleted todos
+      description: Retrieve a list of all soft-deleted todo items
+      operationId: getDeletedTodos
+      responses:
+        "200":
+          description: List of soft-deleted todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Todo"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/v1/todos/{id}:
+    get:
+      tags: [todos]
+      summary: Get a todo by ID
+      description: Retrieve a todo item using its ID
+      operationId: getTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      responses:
+        "200":
+          description: Todo found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: [todos]
+      summary: Update a todo
+      description: Update title, completion status, due date, or tags of a todo item
+      operationId: updateTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTodoRequest"
+      responses:
+        "200":
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [todos]
+      summary: Delete a todo (Soft Delete)
+      description: Soft-delete a todo item by its ID. The record remains in the database with a deleted_at timestamp.
+      operationId: deleteTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: Returns 200 OK if the service is alive
+      operationId: healthz
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      description: Returns 200 OK if the service is ready to accept traffic (DB connection is active)
+      operationId: readyz
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "503":
+          description: Service unavailable (DB unreachable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+
+components:
+  parameters:
+    TodoID:
+      name: id
+      in: path
+      required: true
+      description: Numeric ID of the todo
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+        example: 1
+
+  schemas:
+    Todo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        title:
+          type: string
+          example: "Buy groceries"
+        completed:
+          type: boolean
+          example: false
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["shopping", "personal"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    CreateTodoRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: "Buy groceries"
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["shopping", "personal"]
+
+    UpdateTodoRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          example: "Buy groceries (updated)"
+        completed:
+          type: boolean
+          example: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["shopping"]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "invalid ID"
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

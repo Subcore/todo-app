@@ -30,9 +30,9 @@ WORKDIR /app
 
 # Copy the binary from the build stage
 COPY --from=builder /app/main .
-# Copy static files and docs (if needed for runtime)
+# Copy static files and OpenAPI spec
 COPY --from=builder /app/web ./web
-COPY --from=builder /app/docs ./docs
+COPY --from=builder /app/openapi.yaml ./openapi.yaml
 
 # Use the non-root user
 USER appuser
