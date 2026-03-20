@@ -4,10 +4,10 @@ CLUSTER_NAME := kind
 HELM_RELEASE := todo-app
 HELM_CHART   := ./helm/todo-app
 
-.PHONY: deploy-kind build-image create-cluster install-ingress load-image helm-deploy delete-cluster
+.PHONY: deploy-kind build-image create-cluster install-ingress load-image deploy-db migrate helm-deploy delete-cluster
 
-## Full deploy to local kind cluster
-deploy-kind: create-cluster install-ingress build-image load-image helm-deploy
+## Full local deployment pipeline
+deploy-kind: create-cluster install-ingress build-image load-image deploy-db migrate helm-deploy
 
 ## Build Docker image
 build-image:
@@ -39,6 +39,29 @@ helm-deploy:
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
 		--set image.repository=$(IMAGE_NAME) \
 		--set image.tag=$(IMAGE_TAG)
+
+## Deploy PostgreSQL in cluster
+deploy-db:
+	@if helm list | grep -q todo-postgresql; then \
+		echo "PostgreSQL already deployed, skipping."; \
+	else \
+		helm install todo-postgresql bitnami/postgresql \
+			--set auth.username=postgres \
+			--set auth.password=postgres \
+			--set auth.database=todo_db \
+			--set primary.persistence.enabled=false; \
+		kubectl wait --for=condition=ready pod \
+			--selector=app.kubernetes.io/instance=todo-postgresql \
+			--timeout=120s; \
+	fi
+
+## Run migrations via port-forward
+migrate:
+	kubectl port-forward svc/todo-postgresql 5433:5432 &
+	sleep 3
+	migrate -path=./migrations \
+		-database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up
+	kill %1
 
 ## Delete kind cluster
 delete-cluster:
