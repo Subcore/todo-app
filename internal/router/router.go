@@ -1,39 +1,48 @@
 package router
 
 import (
-	_ "github.com/Subcore/todo-app-v2/docs"
 	"github.com/Subcore/todo-app-v2/internal/handler"
 	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/Subcore/todo-app-v2/internal/service"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/doc.json")))
+	// Static assets
 	r.Static("/assets", "./web/assets")
+
+	// Frontend
 	r.GET("/", func(c *gin.Context) {
 		c.File("./web/index.html")
 	})
 
-	// Initialize repository
+	// OpenAPI 3.0 spec
+	r.StaticFile("/openapi.yaml", "./openapi.yaml")
+
+	// Swagger UI
+	r.GET("/docs", func(c *gin.Context) {
+		c.File("./web/docs.html")
+	})
+	r.GET("/docs/", func(c *gin.Context) {
+		c.Redirect(301, "/docs")
+	})
+
+	// Initialize layers
 	repo := repository.NewTodoRepository(db)
-	// Initialize service
 	svc := service.NewTodoService(repo)
-	// Initialize handler
 	h := handler.NewTodoHandler(svc)
 	hh := handler.NewHealthHandler(db)
 
+	// Health endpoints
 	r.GET("/healthz", hh.Healthz)
 	r.GET("/readyz", hh.Readyz)
 
+	// API v1
 	api := r.Group("/api/v1")
 	{
-
 		todoGroup := api.Group("/todos")
 		{
 			todoGroup.POST("", h.Create)
