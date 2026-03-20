@@ -189,6 +189,7 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 // DeleteCompleted godoc
@@ -207,6 +208,7 @@ func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 // GetDeleted godoc
