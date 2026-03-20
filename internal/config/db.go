@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -32,9 +33,21 @@ func InitDB() (*gorm.DB, error) {
 	}
 
 	// Настройка пула соединений
-	maxIdleConns, _ := strconv.Atoi(getEnv("DB_MAX_IDLE_CONNS", "10"))
-	maxOpenConns, _ := strconv.Atoi(getEnv("DB_MAX_OPEN_CONNS", "100"))
-	connMaxLifetime, _ := time.ParseDuration(getEnv("DB_CONN_MAX_LIFETIME", "1h"))
+	maxIdleConns, err := strconv.Atoi(getEnv("DB_MAX_IDLE_CONNS", "10"))
+	if err != nil {
+		log.Printf("Invalid DB_MAX_IDLE_CONNS value, using default 10: %v", err)
+		maxIdleConns = 10
+	}
+	maxOpenConns, err := strconv.Atoi(getEnv("DB_MAX_OPEN_CONNS", "100"))
+	if err != nil {
+		log.Printf("Invalid DB_MAX_OPEN_CONNS value, using default 100: %v", err)
+		maxOpenConns = 100
+	}
+	connMaxLifetime, err := time.ParseDuration(getEnv("DB_CONN_MAX_LIFETIME", "1h"))
+	if err != nil {
+		log.Printf("Invalid DB_CONN_MAX_LIFETIME value, using default 1h: %v", err)
+		connMaxLifetime = time.Hour
+	}
 
 	sqlDB.SetMaxIdleConns(maxIdleConns)
 	sqlDB.SetMaxOpenConns(maxOpenConns)
