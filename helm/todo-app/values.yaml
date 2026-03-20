@@ -1,0 +1,32 @@
+image:
+  repository: todo-api
+  tag: v1
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: todo.local
+
+db:
+  host: todo-postgresql
+  port: "5432"
+  name: todo_db
+  user: postgres
+  password: postgres
+  sslmode: disable
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
