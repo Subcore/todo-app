@@ -12,6 +12,7 @@ import (
 	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // mockTodoService implements service.TodoService interface for testing
@@ -127,7 +128,7 @@ func TestTodoHandler_Get(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp model.Todo
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, uint(1), resp.ID)
 	})
 
@@ -171,7 +172,7 @@ func TestTodoHandler_GetAll(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp []model.Todo
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Len(t, resp, 2)
 	})
 }
@@ -199,7 +200,7 @@ func TestTodoHandler_Update(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp model.Todo
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "Updated Todo", resp.Title)
 		assert.True(t, resp.Completed)
 	})
@@ -270,7 +271,7 @@ func TestTodoHandler_GetDeleted(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp []model.Todo
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Len(t, resp, 1)
 		assert.Equal(t, "Deleted Todo 1", resp[0].Title)
 	})
