@@ -68,12 +68,9 @@ jobs:
           cache: true
 
       - name: Run migrations
-        uses: docker://migrate/migrate:v4.18.1
-        with:
-          args: >-
-            -path /github/workspace/migrations
-            -database postgres://postgres:postgres@localhost:5432/todo_test?sslmode=disable
-            up
+        run: |
+          curl -sSL https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xz
+          ./migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/todo_test?sslmode=disable" up
 
       - name: Test
         env:
