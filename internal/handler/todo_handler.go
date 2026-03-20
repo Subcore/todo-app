@@ -99,6 +99,10 @@ func (h *TodoHandler) Get(c *gin.Context) {
 // @Tags todos
 // @Accept json
 // @Produce json
+// @Param completed   query bool   false "Filter by completion status"
+// @Param search      query string false "Search in title (case-insensitive)"
+// @Param due_before  query string false "Due before (RFC3339)"
+// @Param due_after   query string false "Due after (RFC3339)"
 // @Success 200 {array} model.Todo
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/todos [get]

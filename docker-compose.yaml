@@ -35,6 +35,20 @@ services:
       db:
         condition: service_healthy
 
+  # Загрузка начальных данных после миграций
+  seed:
+    image: postgres:16.2-alpine
+    container_name: todo-seed
+    volumes:
+      - ./seeds:/seeds
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+    command: >
+      psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -f /seeds/seed.sql
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   # Твоя база данных (оставляем твой изначальный конфиг)
   db:
     image: postgres:16.2-alpine
