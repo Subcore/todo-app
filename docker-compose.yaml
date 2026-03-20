@@ -41,13 +41,12 @@ services:
     container_name: todo-seed
     volumes:
       - ./seeds:/seeds
-    environment:
-      PGPASSWORD: ${DB_PASSWORD:-postgres}
-    command: >
-      psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -f /seeds/seed.sql
+    entrypoint: [ "sh", "-c", "sleep 3 && PGPASSWORD=$$DB_PASSWORD psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -f /seeds/seed.sql" ]
     depends_on:
       migrate:
         condition: service_completed_successfully
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
 
   # Твоя база данных (оставляем твой изначальный конфиг)
   db:
