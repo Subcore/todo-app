@@ -4,16 +4,53 @@
 
 ---
 
+## Содержание
+
+- [Prerequisites](#prerequisites)
+  - [Docker Compose](#docker-compose)
+  - [Kubernetes (kind)](#kubernetes-kind)
+- [Quick start (Docker Compose)](#quick-start-docker-compose)
+- [Quick start (Kubernetes)](#quick-start-kubernetes)
+- [Migrations](#migrations)
+- [Seed data](#seed-data)
+- [Swagger UI](#swagger-ui)
+- [Troubleshooting](#troubleshooting)
+- [Architecture & Tradeoffs](#architecture--tradeoffs)
+- [Остановка и очистка](#остановка-и-очистка)
+
+---
+
 ## Prerequisites
 
-| Tool | Версия | Зачем | Установка |
-|------|--------|-------|-----------|
-| Go | 1.24+ | сборка и запуск API | https://go.dev/doc/install |
-| Docker | 24+ | контейнеризация | https://docs.docker.com/get-docker/ |
-| kind | 0.20+ | локальный Kubernetes-кластер | https://kind.sigs.k8s.io/docs/user/quick-start/#installation |
-| kubectl | 1.28+ | управление кластером | https://kubernetes.io/docs/tasks/tools/ |
-| Helm | 3.x | деплой чартов | https://helm.sh/docs/intro/install/ |
-| golang-migrate | 4.x | CLI для миграций БД | https://github.com/golang-migrate/migrate/releases |
+**Стек:** Go 1.24 · Gin · GORM · PostgreSQL 16 · Docker · Kubernetes (kind) · Helm · golang-migrate
+
+Выберите способ запуска и установите нужные инструменты.
+
+### Docker Compose
+
+Достаточно одного Docker:
+
+```bash
+brew install --cask docker   # macOS
+# или https://docs.docker.com/get-docker/
+```
+
+Далее → [Quick start (Docker Compose)](#quick-start-docker-compose)
+
+### Kubernetes (kind)
+
+```bash
+# macOS
+brew install kind kubectl helm golang-migrate
+
+# Linux
+curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x /usr/local/bin/kind
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+curl -L https://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-amd64.tar.gz | tar xvz && sudo mv migrate /usr/local/bin/
+```
+
+Далее → [Quick start (Kubernetes)](#quick-start-kubernetes)
 
 ---
 
@@ -30,8 +67,11 @@ docker compose up --build -d
 - **seed** — загрузка тестовых данных (завершается после вставки)
 - **api** — Go-сервер на порту `8080`
 
-Приложение доступно по адресу **http://localhost:8080**
-или **http://todo.local:8080**.
+Миграции и seed-данные применяются автоматически.
+
+Приложение доступно по адресу **http://localhost:8080** или **http://todo.local:8080**.
+
+Проверить API → [Swagger UI](#swagger-ui)
 
 ---
 
@@ -50,6 +90,8 @@ make deploy-kind
 ```
 
 Приложение доступно по адресу **http://todo.local**.
+
+Проверить API → [Swagger UI](#swagger-ui)
 
 ---
 
@@ -147,3 +189,24 @@ Production-ready роутер со встроенным recovery middleware, str
 ### Почему persistence отключён для PostgreSQL в Kubernetes
 
 В задании указано «persistence disabled for simplicity». Для локального dev-кластера это оправдано: данные живут в `emptyDir` и теряются при рестарте пода. В production необходимо использовать `PersistentVolumeClaim` или managed PostgreSQL (RDS, Cloud SQL).
+
+---
+
+## Остановка и очистка
+
+### Docker Compose
+
+```bash
+# Остановить контейнеры
+docker compose down
+
+# Остановить и удалить volumes (данные БД)
+docker compose down -v
+```
+
+### Kubernetes (kind)
+
+```bash
+# Удалить kind-кластер со всеми ресурсами
+make delete-cluster
+```
