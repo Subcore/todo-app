@@ -66,17 +66,12 @@ func openDB(t *testing.T) *gorm.DB {
 }
 
 // TestAPI_CRUD_Todo tests the full create → list → verify lifecycle over real HTTP.
-// Requires TEST_DB_DSN env var pointing at a running Postgres instance, e.g.:
-//
-//	TEST_DB_DSN="host=localhost port=5432 user=postgres password=postgres dbname=todos sslmode=disable" \
-//	  go test ./tests/...
 func TestAPI_CRUD_Todo(t *testing.T) {
 	db := openDB(t)
 	if db == nil {
 		t.Skip("TEST_DB_DSN not set — skipping integration test")
 	}
 
-	// Ensure the todos table exists (run migrations externally or via AutoMigrate).
 	sqlDB, err := db.DB()
 	require.NoError(t, err)
 	defer sqlDB.Close()
@@ -146,4 +141,77 @@ func TestAPI_CRUD_Todo(t *testing.T) {
 	defer delResp.Body.Close()
 
 	assert.Equal(t, http.StatusNoContent, delResp.StatusCode)
+
+	// --- DELETE same ID again → 404 (already soft-deleted) ---
+	delReq2, err := http.NewRequest(http.MethodDelete, idURL, nil)
+	require.NoError(t, err)
+
+	delResp2, err := client.Do(delReq2)
+	require.NoError(t, err)
+	defer delResp2.Body.Close()
+
+	assert.Equal(t, http.StatusNotFound, delResp2.StatusCode)
+}
+
+// TestAPI_CreateTodo_EmptyTitle verifies that creating a todo with empty title returns 400.
+func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
+	db := openDB(t)
+	if db == nil {
+		t.Skip("TEST_DB_DSN not set — skipping integration test")
+	}
+
+	r := router.SetupRouter(db)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	// Empty string title
+	resp, err := srv.Client().Post(
+		srv.URL+"/api/v1/todos",
+		"application/json",
+		bytes.NewBufferString(`{"title":""}`),
+	)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// TestAPI_CreateTodo_MissingBody verifies that sending no body returns 400.
+func TestAPI_CreateTodo_MissingBody(t *testing.T) {
+	db := openDB(t)
+	if db == nil {
+		t.Skip("TEST_DB_DSN not set — skipping integration test")
+	}
+
+	r := router.SetupRouter(db)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	resp, err := srv.Client().Post(
+		srv.URL+"/api/v1/todos",
+		"application/json",
+		bytes.NewBufferString(`{}`),
+	)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// TestAPI_GetTodo_NotFound verifies that fetching a non-existent todo returns 404.
+func TestAPI_GetTodo_NotFound(t *testing.T) {
+	db := openDB(t)
+	if db == nil {
+		t.Skip("TEST_DB_DSN not set — skipping integration test")
+	}
+
+	r := router.SetupRouter(db)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	resp, err := srv.Client().Get(srv.URL + "/api/v1/todos/999999")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }

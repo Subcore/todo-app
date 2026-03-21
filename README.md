@@ -6,14 +6,14 @@
 
 ## Prerequisites
 
-| Tool | Версия | Зачем |
-|------|--------|-------|
-| Go | 1.24+ | сборка и запуск API |
-| Docker | 24+ | контейнеризация |
-| kind | 0.20+ | локальный Kubernetes-кластер |
-| kubectl | 1.28+ | управление кластером |
-| Helm | 3.x | деплой чартов |
-| golang-migrate | 4.x | CLI для миграций БД |
+| Tool | Версия | Зачем | Установка |
+|------|--------|-------|-----------|
+| Go | 1.24+ | сборка и запуск API | https://go.dev/doc/install |
+| Docker | 24+ | контейнеризация | https://docs.docker.com/get-docker/ |
+| kind | 0.20+ | локальный Kubernetes-кластер | https://kind.sigs.k8s.io/docs/user/quick-start/#installation |
+| kubectl | 1.28+ | управление кластером | https://kubernetes.io/docs/tasks/tools/ |
+| Helm | 3.x | деплой чартов | https://helm.sh/docs/intro/install/ |
+| golang-migrate | 4.x | CLI для миграций БД | https://github.com/golang-migrate/migrate/releases |
 
 ---
 
@@ -40,7 +40,7 @@ docker compose up --build -d
 make deploy-kind
 ```
 
-Команда выполняет полный пайплайн: создание kind-кластера, сборку Docker-образа, установку Ingress Controller, деплой PostgreSQL через Helm, прогон миграций и установку приложения.
+Команда выполняет полный пайплайн: создание kind-кластера, сборку Docker-образа, установку Ingress Controller, деплой PostgreSQL и приложения через Helm, прогон миграций.
 
 Добавьте запись в `/etc/hosts`:
 
@@ -56,14 +56,14 @@ make deploy-kind
 
 Миграции хранятся в каталоге `migrations/` в формате SQL (up/down).
 
-- **Docker Compose** — сервис `migrate` запускается автоматически после старта БД и применяет все pending-миграции.
+- **Docker Compose** — сервис `migrate` запускается автоматически после старта БД и применяет все pending-миграции. API стартует только после завершения миграций.
 - **Kubernetes (kind)** — выполните `make migrate`. Под капотом используется `kubectl port-forward` к поду PostgreSQL и CLI `golang-migrate`.
 
 ---
 
 ## Seed data
 
-Тестовые данные находятся в `seeds/seed.sql` и содержат три примера задач.
+Тестовые данные находятся в `seeds/seed.sql` и содержат три примера задач. Seed идемпотентен — данные вставляются только если таблица пуста.
 
 - **Docker Compose** — сервис `seed` загружает данные автоматически после миграций.
 - **Вручную** — подключитесь к БД и выполните:
@@ -77,14 +77,8 @@ make deploy-kind
 
 | Окружение | URL |
 |-----------|-----|
-| Docker Compose | http://localhost:8080/docs/index.html |
-| Kubernetes | http://todo.local/docs/index.html |
-
-Если вы изменили аннотации или модели, обновите документацию:
-
-```bash
-swag init -g cmd/api/main.go -d ./
-```
+| Docker Compose | http://localhost:8080/docs |
+| Kubernetes | http://todo.local/docs |
 
 ---
 
@@ -117,6 +111,14 @@ lsof -i :80
 
 Завершите процесс или измените порт в `.env` / `kind-config.yaml`.
 
+### Перед запуском kind — остановите Docker Compose
+
+```bash
+docker compose down
+```
+
+Хотя порты Docker Compose (8080) и kind Ingress (80/443) не пересекаются, одновременная работа двух PostgreSQL может вызвать путаницу.
+
 ---
 
 ## Architecture & Tradeoffs
@@ -129,6 +131,18 @@ lsof -i :80
 
 Быстрый старт: auto-migrate для dev-окружения, soft delete из коробки, встроенный connection pool management. Минус — магия и неоптимальные запросы на сложных кейсах (implicit query generation затрудняет обнаружение N+1). `sqlc` дал бы type-safe SQL без рантайм-рефлексии, но потребовал бы значительно больше boilerplate для базового CRUD. Для MVP компромисс оправдан — критичные пути можно заменить на raw SQL без переписывания остального кода.
 
+### Почему golang-migrate (а не GORM AutoMigrate)
+
+GORM AutoMigrate удобен для прототипирования, но в production ненадёжен: он не поддерживает down-миграции, не гарантирует детерминированную схему, может молча потерять данные при переименовании колонок. golang-migrate даёт версионированные SQL-файлы (up/down), которые легко ревьюить в PR, откатывать и воспроизводить на любом окружении.
+
 ### Почему Gin
 
 Production-ready роутер со встроенным recovery middleware, structured logging и знакомым Express-like API. `chi` или стандартный `net/http` тоже подошли бы, но Gin быстрее для прототипирования: меньше кода на обвязку middleware и маршрутизацию.
+
+### Почему NGINX Ingress без MetalLB
+
+Для локального kind-кластера достаточно NGINX Ingress Controller с `extraPortMappings` — трафик на порты 80/443 хоста пробрасывается напрямую в контейнер control-plane ноды, где работает Ingress Controller. MetalLB нужен, если требуется реальный LoadBalancer IP в локальной сети (например, для доступа с других машин в LAN). Для single-developer сценария это избыточно и добавляет сложность конфигурации.
+
+### Почему persistence отключён для PostgreSQL в Kubernetes
+
+В задании указано «persistence disabled for simplicity». Для локального dev-кластера это оправдано: данные живут в `emptyDir` и теряются при рестарте пода. В production необходимо использовать `PersistentVolumeClaim` или managed PostgreSQL (RDS, Cloud SQL).

@@ -1,5 +1,4 @@
 services:
-  # Наше Go-приложение
   api:
     build:
       context: .
@@ -8,8 +7,7 @@ services:
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      # Переопределяем переменные из .env.example
-      - DB_HOST=db # Указываем имя контейнера БД вместо localhost
+      - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
@@ -17,9 +15,10 @@ services:
       - DB_SSLMODE=disable
     depends_on:
       db:
-        condition: service_healthy # Ждем, пока БД не ответит на healthcheck
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
-  # Сервис для автоматического наката миграций
   migrate:
     image: migrate/migrate
     container_name: todo-migrate
@@ -33,7 +32,6 @@ services:
       db:
         condition: service_healthy
 
-  # Загрузка начальных данных после миграций
   seed:
     image: postgres:16.2-alpine
     container_name: todo-seed
@@ -46,7 +44,6 @@ services:
     environment:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
 
-  # Твоя база данных (оставляем твой изначальный конфиг)
   db:
     image: postgres:16.2-alpine
     container_name: todo-db

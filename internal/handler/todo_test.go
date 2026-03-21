@@ -10,88 +10,91 @@ import (
 	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
+	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// mockTodoService implements service.TodoService interface for testing
-type mockTodoService struct {
-	CreateTodoFunc func(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error)
-	GetTodoFunc    func(ctx context.Context, id uint) (*model.Todo, error)
-	GetAllTodosFunc func(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error)
-	UpdateTodoFunc func(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error)
-	DeleteTodoFunc func(ctx context.Context, id uint) error
-	DeleteCompletedTodosFunc func(ctx context.Context) error
-	GetDeletedTodosFunc    func(ctx context.Context) ([]model.Todo, error)
+// MockTodoService implements service.TodoService using testify/mock
+type MockTodoService struct {
+	mock.Mock
 }
 
-func (m *mockTodoService) CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
-	return m.CreateTodoFunc(ctx, title, dueDate, tags)
+func (m *MockTodoService) CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
+	args := m.Called(ctx, title, dueDate, tags)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Todo), args.Error(1)
 }
 
-func (m *mockTodoService) GetTodo(ctx context.Context, id uint) (*model.Todo, error) {
-	return m.GetTodoFunc(ctx, id)
+func (m *MockTodoService) GetTodo(ctx context.Context, id uint) (*model.Todo, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Todo), args.Error(1)
 }
 
-func (m *mockTodoService) GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
-	return m.GetAllTodosFunc(ctx, filter)
+func (m *MockTodoService) GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
+	args := m.Called(ctx, filter)
+	return args.Get(0).([]model.Todo), args.Error(1)
 }
 
-func (m *mockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
-	return m.UpdateTodoFunc(ctx, id, title, completed, dueDate, tags)
+func (m *MockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
+	args := m.Called(ctx, id, title, completed, dueDate, tags)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Todo), args.Error(1)
 }
 
-func (m *mockTodoService) DeleteTodo(ctx context.Context, id uint) error {
-	return m.DeleteTodoFunc(ctx, id)
+func (m *MockTodoService) DeleteTodo(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
-func (m *mockTodoService) DeleteCompletedTodos(ctx context.Context) error {
-	return m.DeleteCompletedTodosFunc(ctx)
+func (m *MockTodoService) DeleteCompletedTodos(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
 }
 
-func (m *mockTodoService) GetDeletedTodos(ctx context.Context) ([]model.Todo, error) {
-	return m.GetDeletedTodosFunc(ctx)
+func (m *MockTodoService) GetDeletedTodos(ctx context.Context) ([]model.Todo, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]model.Todo), args.Error(1)
 }
 
 func TestTodoHandler_Create(t *testing.T) {
-	// Set Gin to Test Mode
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		// Mock service
-		mockSvc := &mockTodoService{
-			CreateTodoFunc: func(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error) {
-				return &model.Todo{ID: 1, Title: title, Completed: false, DueDate: dueDate, Tags: tags}, nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
-		// Create response recorder
+		mockSvc.On("CreateTodo", mock.Anything, "Test Todo", (*time.Time)(nil), ([]string)(nil)).
+			Return(&model.Todo{ID: 1, Title: "Test Todo", Completed: false}, nil)
+
 		w := httptest.NewRecorder()
-		// Create gin context
 		c, _ := gin.CreateTestContext(w)
 
-		// Create fake request
 		reqBody := `{"title": "Test Todo"}`
 		c.Request = httptest.NewRequest(http.MethodPost, "/todos", bytes.NewBufferString(reqBody))
 		c.Request.Header.Set("Content-Type", "application/json")
 
-		// Call handler
 		h.Create(c)
 
-		// Assertions
 		assert.Equal(t, http.StatusCreated, w.Code)
-
 		var resp model.Todo
-		err := json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.NoError(t, err)
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "Test Todo", resp.Title)
 		assert.Equal(t, uint(1), resp.ID)
+		mockSvc.AssertExpectations(t)
 	})
 
 	t.Run("bad request - missing title", func(t *testing.T) {
-		mockSvc := &mockTodoService{}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
 		w := httptest.NewRecorder()
@@ -111,17 +114,15 @@ func TestTodoHandler_Get(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			GetTodoFunc: func(ctx context.Context, id uint) (*model.Todo, error) {
-				return &model.Todo{ID: id, Title: "Test Todo", Completed: false}, nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("GetTodo", mock.Anything, uint(1)).
+			Return(&model.Todo{ID: 1, Title: "Test Todo", Completed: false}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Params = []gin.Param{{Key: "id", Value: "1"}}
-
 		c.Request = httptest.NewRequest(http.MethodGet, "/todos/1", nil)
 
 		h.Get(c)
@@ -130,25 +131,25 @@ func TestTodoHandler_Get(t *testing.T) {
 		var resp model.Todo
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, uint(1), resp.ID)
+		mockSvc.AssertExpectations(t)
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			GetTodoFunc: func(ctx context.Context, id uint) (*model.Todo, error) {
-				return nil, context.DeadlineExceeded
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("GetTodo", mock.Anything, uint(999)).
+			Return(nil, repository.ErrNotFound)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Params = []gin.Param{{Key: "id", Value: "999"}}
-
 		c.Request = httptest.NewRequest(http.MethodGet, "/todos/999", nil)
 
 		h.Get(c)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -156,16 +157,14 @@ func TestTodoHandler_GetAll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			GetAllTodosFunc: func(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
-				return []model.Todo{{ID: 1, Title: "Todo 1"}, {ID: 2, Title: "Todo 2"}}, nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("GetAllTodos", mock.Anything, model.TodoFilter{}).
+			Return([]model.Todo{{ID: 1, Title: "Todo 1"}, {ID: 2, Title: "Todo 2"}}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-
 		c.Request = httptest.NewRequest(http.MethodGet, "/todos", nil)
 
 		h.GetAll(c)
@@ -174,6 +173,7 @@ func TestTodoHandler_GetAll(t *testing.T) {
 		var resp []model.Todo
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Len(t, resp, 2)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -181,12 +181,11 @@ func TestTodoHandler_Update(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			UpdateTodoFunc: func(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
-				return &model.Todo{ID: id, Title: title, Completed: completed, DueDate: dueDate, Tags: tags}, nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("UpdateTodo", mock.Anything, uint(1), "Updated Todo", true, (*time.Time)(nil), ([]string)(nil)).
+			Return(&model.Todo{ID: 1, Title: "Updated Todo", Completed: true}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -203,6 +202,28 @@ func TestTodoHandler_Update(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "Updated Todo", resp.Title)
 		assert.True(t, resp.Completed)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		mockSvc := new(MockTodoService)
+		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("UpdateTodo", mock.Anything, uint(999), "Title", false, (*time.Time)(nil), ([]string)(nil)).
+			Return(nil, repository.ErrNotFound)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "999"}}
+
+		reqBody := `{"title": "Title"}`
+		c.Request = httptest.NewRequest(http.MethodPut, "/todos/999", bytes.NewBufferString(reqBody))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		h.Update(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -210,22 +231,37 @@ func TestTodoHandler_Delete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			DeleteTodoFunc: func(ctx context.Context, id uint) error {
-				return nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("DeleteTodo", mock.Anything, uint(1)).Return(nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Params = []gin.Param{{Key: "id", Value: "1"}}
-
 		c.Request = httptest.NewRequest(http.MethodDelete, "/todos/1", nil)
 
 		h.Delete(c)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		mockSvc := new(MockTodoService)
+		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("DeleteTodo", mock.Anything, uint(999)).Return(repository.ErrNotFound)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "999"}}
+		c.Request = httptest.NewRequest(http.MethodDelete, "/todos/999", nil)
+
+		h.Delete(c)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -233,21 +269,19 @@ func TestTodoHandler_DeleteCompleted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			DeleteCompletedTodosFunc: func(ctx context.Context) error {
-				return nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("DeleteCompletedTodos", mock.Anything).Return(nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-
 		c.Request = httptest.NewRequest(http.MethodPost, "/todos/clear-completed", nil)
 
 		h.DeleteCompleted(c)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
+		mockSvc.AssertExpectations(t)
 	})
 }
 
@@ -255,16 +289,14 @@ func TestTodoHandler_GetDeleted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("success", func(t *testing.T) {
-		mockSvc := &mockTodoService{
-			GetDeletedTodosFunc: func(ctx context.Context) ([]model.Todo, error) {
-				return []model.Todo{{ID: 1, Title: "Deleted Todo 1"}}, nil
-			},
-		}
+		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
+
+		mockSvc.On("GetDeletedTodos", mock.Anything).
+			Return([]model.Todo{{ID: 1, Title: "Deleted Todo 1"}}, nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-
 		c.Request = httptest.NewRequest(http.MethodGet, "/todos/deleted", nil)
 
 		h.GetDeleted(c)
@@ -274,5 +306,6 @@ func TestTodoHandler_GetDeleted(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Len(t, resp, 1)
 		assert.Equal(t, "Deleted Todo 1", resp[0].Title)
+		mockSvc.AssertExpectations(t)
 	})
 }
