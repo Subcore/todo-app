@@ -8,10 +8,10 @@ INGRESS_NGINX_VERSION := v1.12.1
 REGISTRY_NAME := kind-registry
 REGISTRY_PORT := 5000
 
-.PHONY: deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean
+.PHONY: deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean
 
 ## Full local deployment pipeline
-deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deploy migrate ensure-hosts
+deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts
 	@echo ""
 	@echo "=== Deployment complete ==="
 	@echo "App:     http://todo.local"
@@ -74,6 +74,10 @@ install-ingress:
 push-image:
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 
+## Build Helm chart dependencies
+helm-deps:
+	helm dependency build $(HELM_CHART)
+
 ## Deploy via Helm (includes API + PostgreSQL + Ingress)
 helm-deploy:
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
@@ -85,7 +89,7 @@ helm-deploy:
 migrate:
 	@echo "Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
-		--selector=app=todo-postgresql \
+		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		--timeout=120s
 	@echo "Starting port-forward and running migrations..."
 	kubectl port-forward svc/todo-postgresql 5433:5432 & \
@@ -99,7 +103,7 @@ migrate:
 seed:
 	@echo "Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
-		--selector=app=todo-postgresql \
+		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		--timeout=120s
 	@echo "Loading seed data..."
 	kubectl port-forward svc/todo-postgresql 5433:5432 & \

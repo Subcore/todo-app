@@ -142,6 +142,8 @@ kubectl logs sts/todo-postgresql
 
 API использует health-проверки (`/healthz`, `/readyz`), поэтому Kubernetes перезапустит под автоматически, когда БД станет доступна.
 
+Если PostgreSQL pod не стартует и в логах ошибка `password authentication failed` — убедитесь, что `postgresql.auth.postgresPassword` в `values.yaml` совпадает с `db.password`. При переустановке bitnami может использовать старый пароль из PVC (даже с `persistence.enabled: false`). Решение: `make delete-cluster && make deploy-kind`.
+
 ### ErrImagePull / ImagePullBackOff
 
 Образ `localhost:5000/todo-api:<git-sha>` собирается локально и пушится в локальный Docker Registry. Убедитесь, что registry запущен (`docker ps | grep kind-registry`) и подключён к сети kind (`make connect-registry`).
@@ -203,6 +205,10 @@ Production-ready роутер со встроенным recovery middleware, str
 ### Почему локальный Docker Registry
 
 Задание предполагает flow `build → push → pull`, как в production. Вместо `kind load docker-image` (dev-хак, загружающий образ напрямую на ноду) используется локальный Docker Registry на `localhost:5000`. Kind-кластер настроен доверять этому registry через `containerdConfigPatches`. Это точно воспроизводит production-паттерн: CI собирает образ, пушит в registry, Kubernetes пуллит оттуда по тегу.
+
+### Почему bitnami/postgresql
+
+Задание требует использовать bitnami/postgresql Helm-чарт вместо кастомных манифестов. Bitnami предоставляет production-tested конфигурацию PostgreSQL: настроенные health checks, security context, optional replication, backup интеграции. Для dev-кластера это избыточно, но демонстрирует навык работы с Helm dependencies и subchart конфигурацией через parent values.
 
 ### Почему persistence отключён для PostgreSQL в Kubernetes
 
