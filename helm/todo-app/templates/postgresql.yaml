@@ -28,17 +28,23 @@ spec:
               value: {{ .Values.db.user }}
             - name: POSTGRES_PASSWORD
               value: {{ .Values.db.password }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.db.user }}
+                - -d
+                - {{ .Values.db.name }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 1Gi
+              subPath: pgdata
+      volumes:
+        - name: data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

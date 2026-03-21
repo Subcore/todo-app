@@ -2,11 +2,15 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
 
 	"gorm.io/gorm"
 )
+
+// ErrNotFound is returned when a requested record does not exist.
+var ErrNotFound = errors.New("record not found")
 
 type TodoRepository interface {
 	Create(ctx context.Context, todo *model.Todo) error
@@ -33,6 +37,9 @@ func (r *todoRepository) Create(ctx context.Context, todo *model.Todo) error {
 func (r *todoRepository) GetByID(ctx context.Context, id uint) (*model.Todo, error) {
 	var todo model.Todo
 	if err := r.db.WithContext(ctx).First(&todo, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 	return &todo, nil
@@ -66,13 +73,19 @@ func (r *todoRepository) Update(ctx context.Context, todo *model.Todo) error {
 }
 
 // Delete performs a soft delete of a todo item by its ID.
-// This is a soft delete because the model.Todo struct contains gorm.DeletedAt.
+// Returns ErrNotFound if no record was affected.
 func (r *todoRepository) Delete(ctx context.Context, id uint) error {
-	return r.db.WithContext(ctx).Delete(&model.Todo{}, id).Error
+	result := r.db.WithContext(ctx).Delete(&model.Todo{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // DeleteCompleted performs a soft delete of all todo items marked as completed.
-// This is a soft delete because the model.Todo struct contains gorm.DeletedAt.
 func (r *todoRepository) DeleteCompleted(ctx context.Context) error {
 	return r.db.WithContext(ctx).Where("completed = ?", true).Delete(&model.Todo{}).Error
 }
