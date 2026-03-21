@@ -28,7 +28,7 @@ type createTodoRequest struct {
 
 type updateTodoRequest struct {
 	Title     string     `json:"title" binding:"required,max=255"`
-	Completed bool       `json:"completed"`
+	Completed *bool      `json:"completed"`
 	DueDate   *time.Time `json:"due_date"`
 	Tags      []string   `json:"tags"`
 }
