@@ -8,13 +8,12 @@ INGRESS_NGINX_VERSION := v1.12.1
 REGISTRY_NAME := kind-registry
 REGISTRY_PORT := 5000
 
-.PHONY: deploy-kind build-image create-registry create-cluster connect-registry install-ingress push-image migrate helm-deploy delete-cluster delete-registry clean
+.PHONY: deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean
 
 ## Full local deployment pipeline
-deploy-kind: create-registry create-cluster connect-registry install-ingress build-image push-image helm-deploy migrate
+deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deploy migrate ensure-hosts
 	@echo ""
 	@echo "=== Deployment complete ==="
-	@echo "Add to /etc/hosts:  127.0.0.1  todo.local"
 	@echo "App:     http://todo.local"
 	@echo "Swagger: http://todo.local/docs"
 	@echo ""
@@ -49,6 +48,15 @@ connect-registry:
 		echo "Connecting registry to kind network..."; \
 		docker network connect kind $(REGISTRY_NAME) || true; \
 	fi
+
+## Configure registry access on kind nodes (containerd 2.x hosts.toml)
+configure-registry:
+	@echo "Configuring registry on kind nodes..."
+	@for node in $$(kind get nodes --name $(CLUSTER_NAME)); do \
+		docker exec $$node mkdir -p /etc/containerd/certs.d/localhost:$(REGISTRY_PORT); \
+		printf '[host."http://$(REGISTRY_NAME):5000"]\n  capabilities = ["pull", "resolve", "push"]\n' \
+			| docker exec -i $$node cp /dev/stdin /etc/containerd/certs.d/localhost:$(REGISTRY_PORT)/hosts.toml; \
+	done
 
 ## Install NGINX Ingress Controller for kind (pinned version)
 install-ingress:
@@ -86,6 +94,28 @@ migrate:
 	migrate -path=./migrations \
 		-database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up; \
 	kill $$PF_PID 2>/dev/null
+
+## Load seed data via port-forward
+seed:
+	@echo "Waiting for PostgreSQL pod to be ready..."
+	kubectl wait --for=condition=ready pod \
+		--selector=app=todo-postgresql \
+		--timeout=120s
+	@echo "Loading seed data..."
+	kubectl port-forward svc/todo-postgresql 5433:5432 & \
+	PF_PID=$$!; \
+	sleep 4; \
+	PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d todo_db -f seeds/seed.sql; \
+	kill $$PF_PID 2>/dev/null
+
+## Ensure todo.local is in /etc/hosts
+ensure-hosts:
+	@if grep -q 'todo\.local' /etc/hosts; then \
+		echo "todo.local already in /etc/hosts, skipping."; \
+	else \
+		echo "Adding todo.local to /etc/hosts (requires sudo)..."; \
+		echo '127.0.0.1  todo.local' | sudo tee -a /etc/hosts > /dev/null; \
+	fi
 
 ## Delete kind cluster
 delete-cluster:

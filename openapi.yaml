@@ -5,8 +5,10 @@ info:
   version: "1.0.0"
 
 servers:
+  - url: http://todo.local
+    description: Kubernetes (kind) via Ingress
   - url: http://localhost:8080
-    description: Local development server
+    description: Docker Compose
 
 security: []
 

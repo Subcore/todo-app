@@ -109,6 +109,10 @@ make deploy-kind
 Тестовые данные находятся в `seeds/seed.sql` и содержат три примера задач. Seed идемпотентен — данные вставляются только если таблица пуста.
 
 - **Docker Compose** — сервис `seed` загружает данные автоматически после миграций.
+- **Kubernetes (kind)** — выполните:
+  ```bash
+  make seed
+  ```
 - **Вручную** — подключитесь к БД и выполните:
   ```bash
   psql -h localhost -U postgres -d todo_db -f seeds/seed.sql
