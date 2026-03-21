@@ -1,7 +1,7 @@
 image:
-  repository: todo-api
-  tag: v1
-  pullPolicy: IfNotPresent
+  repository: localhost:5000/todo-api
+  tag: latest
+  pullPolicy: Always
 
 replicaCount: 1
 

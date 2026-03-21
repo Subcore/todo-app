@@ -140,7 +140,17 @@ API использует health-проверки (`/healthz`, `/readyz`), поэ
 
 ### ErrImagePull / ImagePullBackOff
 
-Образ `localhost:5000/todo-api:<git-sha>` собирается локально и загружается в kind через `kind load docker-image`. Убедитесь, что `imagePullPolicy` установлен в `IfNotPresent` (значение по умолчанию в `values.yaml`).
+Образ `localhost:5000/todo-api:<git-sha>` собирается локально и пушится в локальный Docker Registry. Убедитесь, что registry запущен (`docker ps | grep kind-registry`) и подключён к сети kind (`make connect-registry`).
+
+### Registry connection refused
+
+Если `docker push localhost:5000/...` возвращает ошибку `connection refused`, убедитесь что registry запущен:
+
+```bash
+docker ps | grep kind-registry
+# Если не запущен:
+make create-registry
+```
 
 ### Port already in use
 
@@ -186,6 +196,10 @@ Production-ready роутер со встроенным recovery middleware, str
 
 Для локального kind-кластера достаточно NGINX Ingress Controller с `extraPortMappings` — трафик на порты 80/443 хоста пробрасывается напрямую в контейнер control-plane ноды, где работает Ingress Controller. MetalLB нужен, если требуется реальный LoadBalancer IP в локальной сети (например, для доступа с других машин в LAN). Для single-developer сценария это избыточно и добавляет сложность конфигурации.
 
+### Почему локальный Docker Registry
+
+Задание предполагает flow `build → push → pull`, как в production. Вместо `kind load docker-image` (dev-хак, загружающий образ напрямую на ноду) используется локальный Docker Registry на `localhost:5000`. Kind-кластер настроен доверять этому registry через `containerdConfigPatches`. Это точно воспроизводит production-паттерн: CI собирает образ, пушит в registry, Kubernetes пуллит оттуда по тегу.
+
 ### Почему persistence отключён для PostgreSQL в Kubernetes
 
 В задании указано «persistence disabled for simplicity». Для локального dev-кластера это оправдано: данные живут в `emptyDir` и теряются при рестарте пода. В production необходимо использовать `PersistentVolumeClaim` или managed PostgreSQL (RDS, Cloud SQL).
@@ -209,4 +223,7 @@ docker compose down -v
 ```bash
 # Удалить kind-кластер со всеми ресурсами
 make delete-cluster
+
+# Полная очистка (кластер + локальный registry)
+make clean
 ```
