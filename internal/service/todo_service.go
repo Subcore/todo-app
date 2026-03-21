@@ -19,7 +19,7 @@ type TodoService interface {
 	CreateTodo(ctx context.Context, title string, dueDate *time.Time, tags []string) (*model.Todo, error)
 	GetTodo(ctx context.Context, id uint) (*model.Todo, error)
 	GetAllTodos(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error)
-	UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error)
+	UpdateTodo(ctx context.Context, id uint, title string, completed *bool, dueDate *time.Time, tags []string) (*model.Todo, error)
 	DeleteTodo(ctx context.Context, id uint) error
 	DeleteCompletedTodos(ctx context.Context) error
 	GetDeletedTodos(ctx context.Context) ([]model.Todo, error)
@@ -65,7 +65,7 @@ func (s *todoService) GetAllTodos(ctx context.Context, filter model.TodoFilter) 
 	return s.repo.GetAll(ctx, filter)
 }
 
-func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
+func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, completed *bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
 	todo, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -76,14 +76,19 @@ func (s *todoService) UpdateTodo(ctx context.Context, id uint, title string, com
 		return nil, ErrEmptyTitle
 	}
 
-	if tags == nil {
-		tags = []string{}
+	todo.Title = title
+
+	if completed != nil {
+		todo.Completed = *completed
 	}
 
-	todo.Title = title
-	todo.Completed = completed
-	todo.DueDate = dueDate
-	todo.Tags = tags
+	if dueDate != nil {
+		todo.DueDate = dueDate
+	}
+
+	if tags != nil {
+		todo.Tags = tags
+	}
 
 	if err := s.repo.Update(ctx, todo); err != nil {
 		return nil, err
