@@ -115,13 +115,14 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
+		trueVal := true
 		existingTodo := &model.Todo{ID: 1, Title: "Old Title", Completed: false, Tags: []string{}}
 		mockRepo.On("GetByID", ctx, uint(1)).Return(existingTodo, nil)
 		mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 			return todo.ID == 1 && todo.Title == "New Title" && todo.Completed == true
 		})).Return(nil)
 
-		todo, err := svc.UpdateTodo(ctx, 1, "New Title", true, nil, nil)
+		todo, err := svc.UpdateTodo(ctx, 1, "New Title", &trueVal, nil, nil)
 
 		assert.NoError(t, err)
 		assert.Equal(t, "New Title", todo.Title)
@@ -135,7 +136,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 
 		mockRepo.On("GetByID", ctx, uint(999)).Return(nil, repository.ErrNotFound)
 
-		todo, err := svc.UpdateTodo(ctx, 999, "Title", false, nil, nil)
+		todo, err := svc.UpdateTodo(ctx, 999, "Title", nil, nil, nil)
 
 		assert.ErrorIs(t, err, repository.ErrNotFound)
 		assert.Nil(t, todo)
@@ -147,7 +148,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 
 		mockRepo.On("GetByID", ctx, uint(1)).Return(&model.Todo{ID: 1}, nil)
 
-		todo, err := svc.UpdateTodo(ctx, 1, "", false, nil, nil)
+		todo, err := svc.UpdateTodo(ctx, 1, "", nil, nil, nil)
 
 		assert.ErrorIs(t, err, ErrEmptyTitle)
 		assert.Nil(t, todo)

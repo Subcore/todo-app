@@ -43,7 +43,7 @@ func (m *MockTodoService) GetAllTodos(ctx context.Context, filter model.TodoFilt
 	return args.Get(0).([]model.Todo), args.Error(1)
 }
 
-func (m *MockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
+func (m *MockTodoService) UpdateTodo(ctx context.Context, id uint, title string, completed *bool, dueDate *time.Time, tags []string) (*model.Todo, error) {
 	args := m.Called(ctx, id, title, completed, dueDate, tags)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -184,7 +184,8 @@ func TestTodoHandler_Update(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
-		mockSvc.On("UpdateTodo", mock.Anything, uint(1), "Updated Todo", true, (*time.Time)(nil), ([]string)(nil)).
+		trueVal := true
+		mockSvc.On("UpdateTodo", mock.Anything, uint(1), "Updated Todo", &trueVal, (*time.Time)(nil), ([]string)(nil)).
 			Return(&model.Todo{ID: 1, Title: "Updated Todo", Completed: true}, nil)
 
 		w := httptest.NewRecorder()
@@ -209,7 +210,7 @@ func TestTodoHandler_Update(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
-		mockSvc.On("UpdateTodo", mock.Anything, uint(999), "Title", false, (*time.Time)(nil), ([]string)(nil)).
+		mockSvc.On("UpdateTodo", mock.Anything, uint(999), "Title", (*bool)(nil), (*time.Time)(nil), ([]string)(nil)).
 			Return(nil, repository.ErrNotFound)
 
 		w := httptest.NewRecorder()

@@ -37,7 +37,14 @@ services:
     container_name: todo-seed
     volumes:
       - ./seeds:/seeds
-    entrypoint: [ "sh", "-c", "sleep 3 && PGPASSWORD=$$DB_PASSWORD psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -f /seeds/seed.sql" ]
+    entrypoint:
+      - sh
+      - -c
+      - |
+        until PGPASSWORD=$$DB_PASSWORD psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -c '\q' 2>/dev/null; do
+          echo "Waiting for database..."; sleep 1;
+        done
+        PGPASSWORD=$$DB_PASSWORD psql -h db -U ${DB_USER:-postgres} -d ${DB_NAME:-todo_db} -f /seeds/seed.sql
     depends_on:
       migrate:
         condition: service_completed_successfully

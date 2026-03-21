@@ -90,7 +90,7 @@ make deploy-kind
 Чаще всего — PostgreSQL ещё не готов. Проверьте логи:
 
 ```bash
-kubectl logs deploy/todo-app
+kubectl logs deploy/todo
 kubectl logs sts/todo-postgresql
 ```
 
@@ -98,7 +98,7 @@ API использует health-проверки (`/healthz`, `/readyz`), поэ
 
 ### ErrImagePull / ImagePullBackOff
 
-Образ `todo-api:v1` собирается локально и загружается в kind через `kind load docker-image`. Убедитесь, что `imagePullPolicy` установлен в `IfNotPresent` (значение по умолчанию в `values.yaml`).
+Образ `localhost:5000/todo-api:<git-sha>` собирается локально и загружается в kind через `kind load docker-image`. Убедитесь, что `imagePullPolicy` установлен в `IfNotPresent` (значение по умолчанию в `values.yaml`).
 
 ### Port already in use
 
