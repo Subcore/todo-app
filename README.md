@@ -24,7 +24,7 @@
 
 **Стек:** Go 1.24 · Gin · GORM · PostgreSQL 16 · Docker · Kubernetes (kind) · Helm · golang-migrate
 
-Выберите способ запуска и установите нужные инструменты.
+Выберите способ запуска и установите нужные инструменты (`docker compose up` или `make deploy-kind`).
 
 ### Docker Compose
 
