@@ -49,10 +49,10 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Lint Helm chart
-        run: helm lint helm/todo-app
+        run: helm lint deploy/helm/todo-app
 
       - name: Template Helm chart
-        run: helm template todo-app helm/todo-app > /dev/null
+        run: helm template todo-app deploy/helm/todo-app > /dev/null
 
   test:
     name: Unit & Integration Tests
