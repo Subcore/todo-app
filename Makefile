@@ -1,8 +1,9 @@
-IMAGE_NAME := todo-api
-IMAGE_TAG  := v1
+IMAGE_NAME := localhost:5000/todo-api
+GIT_SHA    := $(shell git rev-parse --short HEAD)
+IMAGE_TAG  := $(GIT_SHA)
 CLUSTER_NAME := kind
-HELM_RELEASE := todo-app
-HELM_CHART   := ./helm/todo-app
+HELM_RELEASE := todo
+HELM_CHART   := ./deploy/helm/todo-app
 INGRESS_NGINX_VERSION := v1.12.1
 
 .PHONY: deploy-kind build-image create-cluster install-ingress load-image migrate helm-deploy delete-cluster
@@ -59,11 +60,12 @@ migrate:
 		--selector=app=todo-postgresql \
 		--timeout=120s
 	@echo "Starting port-forward and running migrations..."
-	kubectl port-forward svc/todo-postgresql 5433:5432 &
-	sleep 4
+	kubectl port-forward svc/todo-postgresql 5433:5432 & \
+	PF_PID=$$!; \
+	sleep 4; \
 	migrate -path=./migrations \
-		-database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up
-	-kill %1 2>/dev/null
+		-database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up; \
+	kill $$PF_PID 2>/dev/null
 
 ## Delete kind cluster
 delete-cluster:
