@@ -12,7 +12,7 @@ import (
 
 var (
 	ErrEmptyTitle = errors.New("todo title cannot be empty")
-	ErrNotFound   = errors.New("todo not found")
+	ErrNotFound   = repository.ErrNotFound
 )
 
 type TodoService interface {
@@ -40,7 +40,7 @@ func (s *todoService) CreateTodo(ctx context.Context, title string, dueDate *tim
 	}
 
 	if tags == nil {
-		tags = []string{} // Инициализируем пустой массив вместо null
+		tags = []string{}
 	}
 
 	todo := &model.Todo{

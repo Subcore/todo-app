@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
+	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -72,7 +73,7 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		assert.NotNil(t, todo)
 		assert.Equal(t, title, todo.Title)
 		assert.False(t, todo.Completed)
-		assert.Equal(t, pq.StringArray([]string{}), todo.Tags) // Check default tags
+		assert.Equal(t, pq.StringArray([]string{}), todo.Tags)
 		mockRepo.AssertExpectations(t)
 	})
 
@@ -132,11 +133,11 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
-		mockRepo.On("GetByID", ctx, uint(999)).Return(nil, ErrNotFound)
+		mockRepo.On("GetByID", ctx, uint(999)).Return(nil, repository.ErrNotFound)
 
 		todo, err := svc.UpdateTodo(ctx, 999, "Title", false, nil, nil)
 
-		assert.ErrorIs(t, err, ErrNotFound)
+		assert.ErrorIs(t, err, repository.ErrNotFound)
 		assert.Nil(t, todo)
 	})
 
@@ -150,6 +151,34 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 
 		assert.ErrorIs(t, err, ErrEmptyTitle)
 		assert.Nil(t, todo)
+	})
+}
+
+func TestTodoService_DeleteTodo(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("success", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewTodoService(mockRepo)
+
+		mockRepo.On("Delete", ctx, uint(1)).Return(nil)
+
+		err := svc.DeleteTodo(ctx, 1)
+
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		mockRepo := new(MockRepository)
+		svc := NewTodoService(mockRepo)
+
+		mockRepo.On("Delete", ctx, uint(999)).Return(repository.ErrNotFound)
+
+		err := svc.DeleteTodo(ctx, 999)
+
+		assert.ErrorIs(t, err, repository.ErrNotFound)
+		mockRepo.AssertExpectations(t)
 	})
 }
 

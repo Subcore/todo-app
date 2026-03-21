@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
+	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/Subcore/todo-app-v2/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -19,13 +21,13 @@ func NewTodoHandler(svc service.TodoService) *TodoHandler {
 }
 
 type createTodoRequest struct {
-	Title   string     `json:"title" binding:"required"`
+	Title   string     `json:"title" binding:"required,max=255"`
 	DueDate *time.Time `json:"due_date"`
 	Tags    []string   `json:"tags"`
 }
 
 type updateTodoRequest struct {
-	Title     string     `json:"title" binding:"required"`
+	Title     string     `json:"title" binding:"required,max=255"`
 	Completed bool       `json:"completed"`
 	DueDate   *time.Time `json:"due_date"`
 	Tags      []string   `json:"tags"`
@@ -86,7 +88,11 @@ func (h *TodoHandler) Get(c *gin.Context) {
 
 	todo, err := h.svc.GetTodo(c.Request.Context(), uint(id))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		if errors.Is(err, repository.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -139,6 +145,7 @@ func (h *TodoHandler) GetAll(c *gin.Context) {
 // @Param request body updateTodoRequest true "Todo update request"
 // @Success 200 {object} model.Todo
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/todos/{id} [put]
 func (h *TodoHandler) Update(c *gin.Context) {
@@ -157,6 +164,10 @@ func (h *TodoHandler) Update(c *gin.Context) {
 
 	todo, err := h.svc.UpdateTodo(c.Request.Context(), uint(id), req.Title, req.Completed, req.DueDate, req.Tags)
 	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -173,6 +184,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
 // @Param id path uint true "Todo ID"
 // @Success 204 "No Content"
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/todos/{id} [delete]
 func (h *TodoHandler) Delete(c *gin.Context) {
@@ -184,6 +196,10 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.svc.DeleteTodo(c.Request.Context(), uint(id)); err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
