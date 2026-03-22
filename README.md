@@ -60,14 +60,13 @@ curl -L https://github.com/golang-migrate/migrate/releases/latest/download/migra
 docker compose up --build -d
 ```
 
-Поднимутся четыре сервиса:
+Поднимутся три сервиса:
 
 - **db** — PostgreSQL 16 на порту `5432`
 - **migrate** — прогон миграций (завершается после применения)
-- **seed** — загрузка тестовых данных (завершается после вставки)
 - **api** — Go-сервер на порту `8080`
 
-Миграции и seed-данные применяются автоматически.
+Миграции применяются автоматически. Seed-данные загружаются отдельно → [Seed data](#seed-data).
 
 Приложение доступно по адресу **http://localhost:8080** или **http://todo.local:8080**.
 
@@ -81,7 +80,7 @@ docker compose up --build -d
 make deploy-kind
 ```
 
-Команда выполняет полный пайплайн: создание kind-кластера, сборку Docker-образа, установку Ingress Controller, деплой PostgreSQL и приложения через Helm, прогон миграций.
+Команда выполняет полный пайплайн: создание kind-кластера, сборку Docker-образа, установку Ingress Controller, деплой PostgreSQL и приложения через Helm, прогон миграций. Seed-данные загружаются отдельно → [Seed data](#seed-data).
 
 Добавьте запись в `/etc/hosts`:
 
@@ -108,14 +107,15 @@ make deploy-kind
 
 Тестовые данные находятся в `seeds/seed.sql` и содержат три примера задач. Seed идемпотентен — данные вставляются только если таблица пуста.
 
-- **Docker Compose** — сервис `seed` загружает данные автоматически после миграций.
-- **Kubernetes (kind)** — выполните:
+Seed-данные не загружаются автоматически ни в одном из окружений — это сознательное решение, чтобы разделить инфраструктуру и тестовые данные.
+
+- **Docker Compose:**
+  ```bash
+  docker compose --profile seed up seed
+  ```
+- **Kubernetes (kind):**
   ```bash
   make seed
-  ```
-- **Вручную** — подключитесь к БД и выполните:
-  ```bash
-  psql -h localhost -U postgres -d todo_db -f seeds/seed.sql
   ```
 
 ---
