@@ -33,6 +33,7 @@ services:
         condition: service_healthy
 
   seed:
+    profiles: [seed]
     image: postgres:16.2-alpine
     container_name: todo-seed
     volumes:
