@@ -1,12 +1,10 @@
 # Todo App v2
 
-Простое todo-приложение — Go + PostgreSQL + Docker + Kubernetes.
+**Tech stack:** Go 1.24, Gin, GORM, PostgreSQL 16, golang-migrate, Docker Compose, Kind, Helm 3, NGINX Ingress, GitHub Actions
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Requirements
 ━━━━━━━━━━━━━━━━━━━━
-
-**Tech stack:** Go 1.24, Gin, GORM, PostgreSQL 16, golang-migrate, Docker Compose, Kind, Helm 3, NGINX Ingress, GitHub Actions
 
 **REST API** задокументирован через OpenAPI 3.0 — Swagger UI доступен по `/docs`.
 
@@ -25,7 +23,7 @@
 
 **ORM:** GORM
 
-**Почему GORM?** Soft delete из коробки, управление пулом соединений, меньше бойлерплейта для CRUD. Минус — неявные запросы усложняют поиск N+1. Рассматривал sqlc (type-safe SQL, без рефлексии), но он требует больше кода для базового CRUD. Для небольшого приложения компромисс нормальный — всегда можно спуститься до raw SQL для конкретного запроса.
+**Почему GORM?** Меньше кода для базового CRUD. Альтернатива sqlc требует заметно больше бойлерплейта.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Migrations
@@ -63,7 +61,7 @@
 
 **Тесты:** unit-тесты сервисного слоя + интеграционные API-тесты с реальным PostgreSQL (флаг `-race`).
 
-**Фронтенд:** статическая HTML-страница, раздаётся из API — список / добавление / завершение задач.
+**Фронтенд:** статическая HTML-страница (Alpine.js + Tailwind CSS), раздаётся из API — список / добавление / завершение задач.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Deliverables
@@ -71,7 +69,7 @@
 
 - `openapi.yaml` — спецификация OpenAPI 3.0, валидируется в CI
 - Исходный код — этот репозиторий
-- Architecture & tradeoffs — описаны в разделах Data Layer, Migrations и Ingress этого README
+- Architecture & tradeoffs — описаны в разделах [Data Layer](#data-layer), [Migrations](#migrations) и [Ingress](#ingress--service-exposure) этого README
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Local Dev Environment
@@ -160,7 +158,7 @@ migrate -path=./migrations -database="postgres://postgres:postgres@localhost:543
 
 **Порт уже занят** — `lsof -i :8080` (Compose) или `lsof -i :80` (Kind). Убейте процесс или поменяйте порт в `.env` / `kind-config.yaml`.
 
-**Запущены и Compose, и Kind одновременно** — порты не пересекаются (8080 vs 80/443), но два PostgreSQL могут запутать. Сначала остановите Compose: `docker compose down`
+**Запущены и Compose, и Kind одновременно** — два PostgreSQL (один из Docker Compose, второй из Kind) могут конфликтовать по порту 5432. Перед работой с Kind остановите Compose: `docker compose down`
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Local Kubernetes Cluster
@@ -245,16 +243,13 @@ Kubeconfig указывает на Kind-кластер (контекст: `kind-
 ## Deploy Application
 ━━━━━━━━━━━━━━━━━━━━
 
-```bash
-docker build -t localhost:5000/todo-api:$(git rev-parse --short HEAD) .
-docker push localhost:5000/todo-api:$(git rev-parse --short HEAD)
+Деплой приложения в Kind-кластер через Helm. Образ берётся из локального registry, тег — короткий хеш коммита:
 
+```bash
 helm upgrade --install todo ./deploy/helm/todo-app \
   --set image.repository=localhost:5000/todo-api \
-  --set image.tag=$(git rev-parse --short HEAD)
+  --set image.tag=$GIT_SHA
 ```
-
-Или всё одной командой: `make deploy-kind`
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Release Workflow
@@ -283,9 +278,9 @@ NGINX Ingress Controller установлен через Helm. Kind `extraPortMa
 ## Explain Choice: NGINX vs MetalLB
 ━━━━━━━━━━━━━━━━━━━━
 
-**NGINX Ingress** — используется в этом проекте. Для локального Kind-кластера с `extraPortMappings` порты 80/443 идут напрямую в control-plane ноду. NodePort/localhost доступа достаточно для одного разработчика.
+**NGINX Ingress** — используется в этом проекте. Kind `extraPortMappings` в `kind-config.yaml` пробрасывает порты 80/443 с хоста (или виртуальной машины) в control-plane ноду. Приложение доступно по `http://todo.local` — работает и локально, и на VM.
 
-**MetalLB** — имеет смысл, если нужен реальный LoadBalancer IP в локальной сети (доступ с других машин). Для одного разработчика это лишнее и больше конфигурации.
+**MetalLB** — нужен, если Kind запущен в среде, где `extraPortMappings` недоступен, или нужен выделенный LoadBalancer IP в локальной сети (доступ с других машин). В нашем случае не требуется.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Cleanup
