@@ -50,24 +50,12 @@ macOS: https://docs.docker.com/desktop/mac/install/
 Install Docker first, then: / Сначала Docker, затем:
 
 ```bash
-ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') 
-
-# kind
-curl -Lo ./kind "https://kind.sigs.k8s.io/dl/latest/kind-linux-$ARCH" && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind
-kind version
-
-# kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/$ARCH/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-kubectl version
-
-# helm (auto-detects arch)
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-helm version
-
-# golang-migrate
-curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-$ARCH.tar.gz" | tar xvz && sudo mv migrate /usr/local/bin/
-migrate -version
+make install-tools
 ```
+
+One command installs everything: kind, kubectl, helm, golang-migrate. Skips tools that are already installed. Works on Linux and macOS.
+
+Одна команда устанавливает всё: kind, kubectl, helm, golang-migrate. Пропускает уже установленные. Работает на Linux и macOS.
 
 
 ---
