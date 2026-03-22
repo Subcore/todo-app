@@ -47,6 +47,14 @@ macOS: https://docs.docker.com/desktop/mac/install/
 
 ### For Kubernetes (Kind)
 
+#### make
+
+Most systems already have it. If not: / Обычно уже установлен. Если нет:
+
+```bash
+sudo apt install make
+```
+
 Install Docker first, then: / Сначала Docker, затем:
 
 ```bash
