@@ -90,6 +90,11 @@ push-image:
 ## Build Helm chart dependencies
 helm-deps:
 	@echo "[8/11] Building Helm chart dependencies..."
+	@if ! helm repo list 2>/dev/null | grep -q bitnami; then \
+		echo "  Adding Bitnami Helm repository..."; \
+		helm repo add bitnami https://charts.bitnami.com/bitnami; \
+		helm repo update; \
+	fi
 	helm dependency build $(HELM_CHART)
 
 ## Deploy via Helm (includes API + PostgreSQL + Ingress)

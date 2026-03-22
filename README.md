@@ -10,11 +10,11 @@ Simple todo app — Go + PostgreSQL + Docker + Kubernetes.
 
 - [Prerequisites](#prerequisites)
 - [How to run docker compose up](#how-to-run-docker-compose-up)
-- [Local Kubernetes cluster](#local-kubernetes-cluster)
 - [How to run migrations](#how-to-run-migrations)
 - [How to seed data](#how-to-seed-data)
 - [How to open the app locally](#how-to-open-the-app-locally)
 - [How to open Swagger UI](#how-to-open-swagger-ui)
+- [Local Kubernetes cluster](#local-kubernetes-cluster)
 - [Build pipeline](#build-pipeline)
 - [Helm chart](#helm-chart)
 - [Architecture & tradeoffs](#architecture--tradeoffs)
@@ -50,11 +50,7 @@ macOS: https://docs.docker.com/desktop/mac/install/
 Install Docker first, then: / Сначала Docker, затем:
 
 ```bash
-sudo apt install make   # not pre-installed on Ubuntu 24.04 server / не входит в базовую поставку Ubuntu 24.04 Server
-```
-
-```bash
-ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') 
 
 # kind
 curl -Lo ./kind "https://kind.sigs.k8s.io/dl/latest/kind-linux-$ARCH" && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind
@@ -72,6 +68,7 @@ helm version
 curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.linux-$ARCH.tar.gz" | tar xvz && sudo mv migrate /usr/local/bin/
 migrate -version
 ```
+
 
 ---
 
@@ -101,51 +98,11 @@ App is available at / Приложение доступно по адресу: h
 
 ---
 
-## Local Kubernetes cluster
-
-Kind cluster: 1 control-plane + 1 worker node.
-
-Kind-кластер: 1 control-plane + 1 worker нода.
-
-```bash
-make deploy-kind
-```
-
-One command does everything:
-
-Одна команда делает всё:
-
-1. Starts local Docker Registry on `localhost:5000`
-2. Creates Kind cluster
-3. Connects registry to Kind network
-4. Installs NGINX Ingress Controller
-5. Builds and pushes Docker image
-6. Deploys PostgreSQL (bitnami/postgresql) and the app via Helm
-7. Runs migrations
-8. Adds `todo.local` to `/etc/hosts`
-
-After that: http://todo.local
-
-If you need to do the build step manually:
-
-Если нужно собрать вручную:
-
-```bash
-docker build -t localhost:5000/todo-api:$(git rev-parse --short HEAD) .
-docker push localhost:5000/todo-api:$(git rev-parse --short HEAD)
-
-helm upgrade --install todo ./deploy/helm/todo-app \
-  --set image.repository=localhost:5000/todo-api \
-  --set image.tag=$(git rev-parse --short HEAD)
-```
-
----
-
 ## How to run migrations
 
-Migrations live in `migrations/` — plain SQL files with up/down versions, managed by golang-migrate.
+**EN:** Migrations live in `migrations/` — plain SQL files with up/down versions, managed by golang-migrate.
 
-Миграции лежат в `migrations/` — обычные SQL-файлы с up/down версиями, управляются golang-migrate.
+**RU:** Миграции лежат в `migrations/` — обычные SQL-файлы с up/down версиями, управляются golang-migrate.
 
 ### Docker Compose
 
@@ -163,7 +120,7 @@ Automatic. The `migrate` service runs before the API and applies all pending mig
 docker compose down
 ```
 
-Then run migrations: / Затем запустите миграции:
+тепеь можно выполнять
 
 ```bash
 kubectl port-forward svc/todo-postgresql 5433:5432 &
@@ -251,6 +208,46 @@ API документирован через OpenAPI 3.0. Swagger UI по адр�
 | `GET` | `/readyz` | Readiness probe + DB ping |
 
 **Filters:** `?completed=true`, `?due_before=2025-01-01T00:00:00Z`, `?due_after=...`, `?search=grocery`
+
+---
+
+## Local Kubernetes cluster
+
+Kind cluster: 1 control-plane + 1 worker node.
+
+Kind-кластер: 1 control-plane + 1 worker нода.
+
+```bash
+make deploy-kind
+```
+
+One command does everything:
+
+Одна команда делает всё:
+
+1. Starts local Docker Registry on `localhost:5000`
+2. Creates Kind cluster
+3. Connects registry to Kind network
+4. Installs NGINX Ingress Controller
+5. Builds and pushes Docker image
+6. Deploys PostgreSQL (bitnami/postgresql) and the app via Helm
+7. Runs migrations
+8. Adds `todo.local` to `/etc/hosts`
+
+After that: http://todo.local
+
+If you need to do the build step manually:
+
+Если нужно собрать вручную:
+
+```bash
+docker build -t localhost:5000/todo-api:$(git rev-parse --short HEAD) .
+docker push localhost:5000/todo-api:$(git rev-parse --short HEAD)
+
+helm upgrade --install todo ./deploy/helm/todo-app \
+  --set image.repository=localhost:5000/todo-api \
+  --set image.tag=$(git rev-parse --short HEAD)
+```
 
 ---
 
