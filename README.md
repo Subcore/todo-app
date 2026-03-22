@@ -1,12 +1,10 @@
 # Todo App v2
 
-Simple todo app — Go + PostgreSQL + Docker + Kubernetes.
+**Tech stack:** Go 1.24, Gin, GORM, PostgreSQL 16, golang-migrate, Docker Compose, Kind, Helm 3, NGINX Ingress, GitHub Actions
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Requirements
 ━━━━━━━━━━━━━━━━━━━━
-
-**Tech stack:** Go 1.24, Gin, GORM, PostgreSQL 16, golang-migrate, Docker Compose, Kind, Helm 3, NGINX Ingress, GitHub Actions
 
 **REST API** documented with OpenAPI 3.0 — Swagger UI served at `/docs`.
 
@@ -25,7 +23,7 @@ Simple todo app — Go + PostgreSQL + Docker + Kubernetes.
 
 **ORM:** GORM
 
-**Why GORM?** Soft delete built in, connection pool management, less boilerplate for CRUD. Downside — implicit queries make it harder to spot N+1. Considered sqlc (type-safe SQL, no reflection), but it needs more code for basic CRUD. For a small app this tradeoff is fine — can always drop to raw SQL for specific queries.
+**Why GORM?** Less code for basic CRUD. The alternative sqlc requires noticeably more boilerplate.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Migrations
@@ -63,7 +61,7 @@ Simple todo app — Go + PostgreSQL + Docker + Kubernetes.
 
 **Tests:** service-level unit tests + API integration tests against real PostgreSQL (with `-race` flag).
 
-**Frontend:** static HTML page served from the API — list / add / complete todos.
+**Frontend:** static HTML page (Alpine.js + Tailwind CSS) served from the API — list / add / complete todos.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Deliverables
@@ -71,7 +69,7 @@ Simple todo app — Go + PostgreSQL + Docker + Kubernetes.
 
 - `openapi.yaml` — OpenAPI 3.0 spec, validated in CI
 - Source code — this repository
-- Architecture & tradeoffs — covered in Data Layer, Migrations, and Ingress sections of this README
+- Architecture & tradeoffs — covered in [Data Layer](#data-layer), [Migrations](#migrations), and [Ingress](#ingress--service-exposure) sections of this README
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Local Dev Environment
@@ -160,7 +158,7 @@ Test data in `seeds/seed.sql` — 3 sample todos. Idempotent, inserts only if th
 
 **Port already in use** — `lsof -i :8080` (Compose) or `lsof -i :80` (Kind). Kill the process or change port in `.env` / `kind-config.yaml`.
 
-**Running both Compose and Kind** — ports don't overlap (8080 vs 80/443), but two PostgreSQL instances can confuse. Stop Compose first: `docker compose down`
+**Running both Compose and Kind** — two PostgreSQL instances (one from Docker Compose, one from Kind) can conflict on port 5432. Stop Compose before working with Kind: `docker compose down`
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Local Kubernetes Cluster
@@ -245,16 +243,13 @@ Kubeconfig targets the Kind cluster (context: `kind-todo`).
 ## Deploy Application
 ━━━━━━━━━━━━━━━━━━━━
 
-```bash
-docker build -t localhost:5000/todo-api:$(git rev-parse --short HEAD) .
-docker push localhost:5000/todo-api:$(git rev-parse --short HEAD)
+Deploy the app to the Kind cluster via Helm. The image is pulled from the local registry, tag is the short commit hash:
 
+```bash
 helm upgrade --install todo ./deploy/helm/todo-app \
   --set image.repository=localhost:5000/todo-api \
-  --set image.tag=$(git rev-parse --short HEAD)
+  --set image.tag=$GIT_SHA
 ```
-
-Or use the all-in-one: `make deploy-kind`
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Release Workflow
@@ -283,9 +278,9 @@ App is exposed at http://todo.local (Ingress rule with host `todo.local`).
 ## Explain Choice: NGINX vs MetalLB
 ━━━━━━━━━━━━━━━━━━━━
 
-**NGINX Ingress** — used in this project. For a local Kind cluster with `extraPortMappings`, ports 80/443 go straight to the control-plane node. NodePort/localhost access is enough for solo dev.
+**NGINX Ingress** — used in this project. Kind `extraPortMappings` in `kind-config.yaml` forwards ports 80/443 from the host (or VM) to the control-plane node. The app is accessible at `http://todo.local` — works both locally and on a VM.
 
-**MetalLB** — would make sense if you need a real LoadBalancer IP on your LAN (access from other machines). For solo dev it's overkill and more config to maintain.
+**MetalLB** — needed if Kind runs in an environment where `extraPortMappings` is unavailable, or a dedicated LoadBalancer IP on the LAN is required (access from other machines). Not needed in our case.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Cleanup
