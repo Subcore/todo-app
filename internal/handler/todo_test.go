@@ -4,18 +4,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/Subcore/todo-app-v2/internal/model"
 	"github.com/Subcore/todo-app-v2/internal/repository"
+	"github.com/Subcore/todo-app-v2/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
+
+// Проверка на этапе компиляции: MockTodoService реализует service.TodoService.
+// Если интерфейс изменится — код не скомпилируется.
+var _ service.TodoService = (*MockTodoService)(nil)
 
 // MockTodoService implements service.TodoService using testify/mock
 type MockTodoService struct {
@@ -461,4 +468,99 @@ func TestTodoHandler_GetDeleted(t *testing.T) {
 		assert.Equal(t, "Deleted Todo 1", resp[0].Title)
 		mockSvc.AssertExpectations(t)
 	})
+}
+
+// Проверяем что title длиной 256 символов отклоняется с кодом 400
+func TestTodoHandler_Create_TitleTooLong(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockSvc := new(MockTodoService)
+	h := NewTodoHandler(mockSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	longTitle := strings.Repeat("a", 256)
+	reqBody := fmt.Sprintf(`{"title":%q}`, longTitle)
+	c.Request = httptest.NewRequest(http.MethodPost, "/todos", bytes.NewBufferString(reqBody))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.Create(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockSvc.AssertNotCalled(t, "CreateTodo")
+}
+
+// Проверяем что title ровно 255 символов принимается
+func TestTodoHandler_Create_TitleExactMax(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockSvc := new(MockTodoService)
+	h := NewTodoHandler(mockSvc)
+
+	exactTitle := strings.Repeat("a", 255)
+	mockSvc.On("CreateTodo", mock.Anything, exactTitle, (*time.Time)(nil), ([]string)(nil)).
+		Return(&model.Todo{ID: 1, Title: exactTitle}, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	reqBody := fmt.Sprintf(`{"title":%q}`, exactTitle)
+	c.Request = httptest.NewRequest(http.MethodPost, "/todos", bytes.NewBufferString(reqBody))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.Create(c)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+	mockSvc.AssertExpectations(t)
+}
+
+// Проверяем что query-параметры due_before и due_after парсятся и передаются в сервис
+func TestTodoHandler_GetAll_WithDateFilters(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	dueBefore := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	dueAfter := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name   string
+		query  string
+		filter model.TodoFilter
+	}{
+		{
+			name:   "due_before only",
+			query:  "/todos?due_before=" + dueBefore.Format(time.RFC3339),
+			filter: model.TodoFilter{DueBefore: &dueBefore},
+		},
+		{
+			name:   "due_after only",
+			query:  "/todos?due_after=" + dueAfter.Format(time.RFC3339),
+			filter: model.TodoFilter{DueAfter: &dueAfter},
+		},
+		{
+			name:  "both dates",
+			query: "/todos?due_before=" + dueBefore.Format(time.RFC3339) + "&due_after=" + dueAfter.Format(time.RFC3339),
+			filter: model.TodoFilter{
+				DueBefore: &dueBefore,
+				DueAfter:  &dueAfter,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := new(MockTodoService)
+			h := NewTodoHandler(mockSvc)
+
+			mockSvc.On("GetAllTodos", mock.Anything, tt.filter).
+				Return([]model.Todo{{ID: 1, Title: "Filtered"}}, nil)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest(http.MethodGet, tt.query, nil)
+
+			h.GetAll(c)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			mockSvc.AssertExpectations(t)
+		})
+	}
 }

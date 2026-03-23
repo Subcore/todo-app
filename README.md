@@ -161,6 +161,34 @@ Test data in `seeds/seed.sql` — 3 sample todos. Idempotent, inserts only if th
 **Running both Compose and Kind** — two PostgreSQL instances (one from Docker Compose, one from Kind) can conflict on port 5432. Stop Compose before working with Kind: `docker compose down`
 
 ━━━━━━━━━━━━━━━━━━━━
+## Running Tests Locally
+━━━━━━━━━━━━━━━━━━━━
+
+### Unit tests (no database required)
+
+```bash
+go test ./internal/handler/... ./internal/service/... -v -race
+```
+
+### Integration tests (requires PostgreSQL)
+
+```bash
+# 1. Start PostgreSQL
+docker compose up db -d
+
+# 2. Create test database and run migrations
+PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE todo_test;"
+migrate -path migrations \
+  -database "postgres://postgres:postgres@localhost:5432/todo_test?sslmode=disable" up
+
+# 3. Run all tests
+TEST_DB_DSN="host=localhost port=5432 user=postgres password=postgres dbname=todo_test sslmode=disable" \
+  go test ./... -v -race
+```
+
+> **Note:** CI uses `todo_test` database. Docker Compose app uses `todo_db`.
+
+━━━━━━━━━━━━━━━━━━━━
 ## Local Kubernetes Cluster
 ━━━━━━━━━━━━━━━━━━━━
 

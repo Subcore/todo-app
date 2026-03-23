@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
 	"testing"
@@ -169,6 +170,11 @@ func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	// Проверяем что ответ содержит поле "error" с описанием проблемы
+	var errBody map[string]string
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errBody))
+	assert.NotEmpty(t, errBody["error"], "error response must contain 'error' field")
 }
 
 // Проверяем что запрос без тела возвращает 400
@@ -188,6 +194,10 @@ func TestAPI_CreateTodo_MissingBody(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var errBody map[string]string
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errBody))
+	assert.NotEmpty(t, errBody["error"], "error response must contain 'error' field")
 }
 
 // Проверяем что запрос несуществующей задачи возвращает 404
@@ -203,6 +213,10 @@ func TestAPI_GetTodo_NotFound(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	var errBody map[string]string
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errBody))
+	assert.Equal(t, "not found", errBody["error"])
 }
 
 // Проверяем что GET /api/v1/todos?completed=true возвращает только выполненные задачи
@@ -384,4 +398,24 @@ func TestAPI_ClearCompleted(t *testing.T) {
 	var deleted []map[string]interface{}
 	require.NoError(t, json.NewDecoder(deletedResp.Body).Decode(&deleted))
 	assert.Len(t, deleted, 2)
+}
+
+// Проверяем что API отклоняет title длиннее 255 символов
+func TestAPI_CreateTodo_TitleTooLong(t *testing.T) {
+	db := setupTestDB(t)
+	r := router.SetupRouter(db)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	longTitle := strings.Repeat("x", 256)
+	body := fmt.Sprintf(`{"title":%q}`, longTitle)
+	resp, err := srv.Client().Post(srv.URL+"/api/v1/todos", "application/json", bytes.NewBufferString(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var errBody map[string]string
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errBody))
+	assert.NotEmpty(t, errBody["error"])
 }
