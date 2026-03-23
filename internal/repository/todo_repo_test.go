@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,30 +15,48 @@ import (
 	"gorm.io/gorm"
 )
 
-// setupRepoDB подключается к тестовой базе, прогоняет миграции, очищает таблицу
-// и регистрирует очистку после теста. Пропускает тест если TEST_DB_DSN не задан.
-func setupRepoDB(t *testing.T) (TodoRepository, *gorm.DB) {
-	dsn := os.Getenv("TEST_DB_DSN")
-	if dsn == "" {
+var testDB *gorm.DB
+var setupOnce sync.Once
+
+// initTestDB подключается к тестовой базе один раз для всего пакета
+// и проверяет что миграции были применены.
+func initTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	setupOnce.Do(func() {
+		dsn := os.Getenv("TEST_DB_DSN")
+		if dsn == "" {
+			return
+		}
+		db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err != nil {
+			panic("failed to connect to test DB: " + err.Error())
+		}
+		var exists bool
+		db.Raw(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'todos')`).Scan(&exists)
+		if !exists {
+			panic("Table 'todos' not found. Run: migrate -path migrations -database $TEST_DB_URL up")
+		}
+		testDB = db
+	})
+	if testDB == nil {
 		t.Skip("Skipping test: TEST_DB_DSN not set")
 	}
+	return testDB
+}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	require.NoError(t, err)
+// setupRepoDB создаёт транзакцию для каждого теста и откатывает её в конце.
+// Это изолирует тесты друг от друга без TRUNCATE и безопасно для t.Parallel().
+func setupRepoDB(t *testing.T) (TodoRepository, *gorm.DB) {
+	t.Helper()
+	db := initTestDB(t)
 
-	err = db.AutoMigrate(&model.Todo{})
-	require.NoError(t, err)
+	tx := db.Begin()
+	require.NotNil(t, tx)
+	require.NoError(t, tx.Error)
 
-	// Начинаем каждый тест с чистой таблицей чтобы тесты не мешали друг другу
-	err = db.Exec("TRUNCATE todos RESTART IDENTITY CASCADE").Error
-	require.NoError(t, err)
+	t.Cleanup(func() { tx.Rollback() })
 
-	t.Cleanup(func() {
-		db.Exec("TRUNCATE todos RESTART IDENTITY CASCADE")
-	})
-
-	repo := NewTodoRepository(db)
-	return repo, db
+	return NewTodoRepository(tx), tx
 }
 
 // boolPtr нужен чтобы получить указатель на булев литерал — для необязательных полей фильтра
@@ -251,4 +271,32 @@ func TestTodoRepository_GetDeleted_Empty(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Empty(t, deletedTodos)
+}
+
+// Проверяем что одновременное создание задач не приводит к гонке данных
+func TestTodoRepository_ConcurrentCreate(t *testing.T) {
+	repo, _ := setupRepoDB(t)
+	ctx := context.Background()
+
+	const goroutines = 10
+	var wg sync.WaitGroup
+	errs := make([]error, goroutines)
+
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			todo := model.Todo{Title: fmt.Sprintf("Concurrent task %d", idx)}
+			errs[idx] = repo.Create(ctx, &todo)
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range errs {
+		assert.NoError(t, err, "goroutine %d failed", i)
+	}
+
+	all, err := repo.GetAll(ctx, model.TodoFilter{})
+	require.NoError(t, err)
+	assert.Len(t, all, goroutines)
 }
