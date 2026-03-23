@@ -211,3 +211,93 @@ func TestTodoService_GetMethods(t *testing.T) {
 		assert.Equal(t, expected, todos)
 	})
 }
+
+func TestTodoService_UpdateTodo_WithTagsAndDueDate(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := new(MockRepository)
+	svc := NewTodoService(mockRepo)
+
+	existingTodo := &model.Todo{ID: 5, Title: "Old", Tags: pq.StringArray{}, DueDate: nil}
+	newTags := []string{"work", "urgent"}
+	due := time.Now().Add(24 * time.Hour)
+
+	mockRepo.On("GetByID", ctx, uint(5)).Return(existingTodo, nil)
+	mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
+		return todo.ID == 5 && len(todo.Tags) == 2 && todo.DueDate != nil
+	})).Return(nil)
+
+	todo, err := svc.UpdateTodo(ctx, 5, "New", nil, &due, newTags)
+
+	assert.NoError(t, err)
+	assert.Equal(t, pq.StringArray(newTags), todo.Tags)
+	assert.Equal(t, &due, todo.DueDate)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestTodoService_UpdateTodo_NilTagsPreserveExisting(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := new(MockRepository)
+	svc := NewTodoService(mockRepo)
+
+	existingTags := pq.StringArray{"work", "urgent"}
+	existingTodo := &model.Todo{ID: 7, Title: "Has Tags", Tags: existingTags}
+
+	mockRepo.On("GetByID", ctx, uint(7)).Return(existingTodo, nil)
+	mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
+		return todo.ID == 7 && len(todo.Tags) == 2
+	})).Return(nil)
+
+	// tags=nil → tags should remain ["work", "urgent"]
+	todo, err := svc.UpdateTodo(ctx, 7, "Has Tags", nil, nil, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, existingTags, todo.Tags)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestTodoService_CreateTodo_TitleTrimmed(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := new(MockRepository)
+	svc := NewTodoService(mockRepo)
+
+	mockRepo.On("Create", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
+		return todo.Title == "spaced title"
+	})).Return(nil)
+
+	todo, err := svc.CreateTodo(ctx, "  spaced title  ", nil, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "spaced title", todo.Title)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestTodoService_DeleteCompletedTodos(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := new(MockRepository)
+	svc := NewTodoService(mockRepo)
+
+	mockRepo.On("DeleteCompleted", ctx).Return(nil)
+
+	err := svc.DeleteCompletedTodos(ctx)
+
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestTodoService_GetDeletedTodos(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := new(MockRepository)
+	svc := NewTodoService(mockRepo)
+
+	expected := []model.Todo{
+		{ID: 10, Title: "Deleted 1"},
+		{ID: 11, Title: "Deleted 2"},
+	}
+	mockRepo.On("GetDeleted", ctx).Return(expected, nil)
+
+	todos, err := svc.GetDeletedTodos(ctx)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, todos)
+	mockRepo.AssertExpectations(t)
+}
