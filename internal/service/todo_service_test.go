@@ -12,6 +12,9 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// Проверка на этапе компиляции: MockRepository реализует repository.TodoRepository.
+var _ repository.TodoRepository = (*MockRepository)(nil)
+
 // MockRepository is a mock of TodoRepository
 type MockRepository struct {
 	mock.Mock
