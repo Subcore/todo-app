@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
+
 	"testing"
 
 	"github.com/Subcore/todo-app-v2/internal/router"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+
 )
 
 func init() {
@@ -52,29 +51,11 @@ func TestAPI_Readyz_NoDB(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
 
-// openDB connects to Postgres using TEST_DB_DSN.
-// Returns nil if the env var is not set (caller should skip).
-func openDB(t *testing.T) *gorm.DB {
-	t.Helper()
-	dsn := os.Getenv("TEST_DB_DSN")
-	if dsn == "" {
-		return nil
-	}
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	require.NoError(t, err, "failed to connect to test database")
-	return db
-}
+
 
 // TestAPI_CRUD_Todo tests the full create → list → verify lifecycle over real HTTP.
 func TestAPI_CRUD_Todo(t *testing.T) {
-	db := openDB(t)
-	if db == nil {
-		t.Skip("TEST_DB_DSN not set — skipping integration test")
-	}
-
-	sqlDB, err := db.DB()
-	require.NoError(t, err)
-	defer sqlDB.Close()
+	db := setupTestDB(t)
 
 	r := router.SetupRouter(db)
 	srv := httptest.NewServer(r)
@@ -155,10 +136,7 @@ func TestAPI_CRUD_Todo(t *testing.T) {
 
 // TestAPI_CreateTodo_EmptyTitle verifies that creating a todo with empty title returns 400.
 func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
-	db := openDB(t)
-	if db == nil {
-		t.Skip("TEST_DB_DSN not set — skipping integration test")
-	}
+	db := setupTestDB(t)
 
 	r := router.SetupRouter(db)
 	srv := httptest.NewServer(r)
@@ -178,10 +156,7 @@ func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
 
 // TestAPI_CreateTodo_MissingBody verifies that sending no body returns 400.
 func TestAPI_CreateTodo_MissingBody(t *testing.T) {
-	db := openDB(t)
-	if db == nil {
-		t.Skip("TEST_DB_DSN not set — skipping integration test")
-	}
+	db := setupTestDB(t)
 
 	r := router.SetupRouter(db)
 	srv := httptest.NewServer(r)
@@ -200,10 +175,7 @@ func TestAPI_CreateTodo_MissingBody(t *testing.T) {
 
 // TestAPI_GetTodo_NotFound verifies that fetching a non-existent todo returns 404.
 func TestAPI_GetTodo_NotFound(t *testing.T) {
-	db := openDB(t)
-	if db == nil {
-		t.Skip("TEST_DB_DSN not set — skipping integration test")
-	}
+	db := setupTestDB(t)
 
 	r := router.SetupRouter(db)
 	srv := httptest.NewServer(r)
