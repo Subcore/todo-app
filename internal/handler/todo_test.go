@@ -107,6 +107,8 @@ func TestTodoHandler_Create(t *testing.T) {
 		h.Create(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		mockSvc.AssertNotCalled(t, "CreateTodo")
 	})
 }
 
