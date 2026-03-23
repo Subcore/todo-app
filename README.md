@@ -1,6 +1,6 @@
 # Todo App v2
 
-**Tech stack:** Go 1.24, Gin, GORM, PostgreSQL 16, golang-migrate, Docker Compose, Kind, Helm 3, NGINX Ingress, GitHub Actions
+**Tech stack:** Go 1.24.1, Gin, GORM, PostgreSQL 16.2, golang-migrate v4.19.1, Docker Compose, Kind v0.31.0, kubectl v1.35.3, Helm v4.1.3, NGINX Ingress v1.12.1, GitHub Actions
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Requirements
@@ -17,7 +17,7 @@
 ## Data Layer
 ━━━━━━━━━━━━━━━━━━━━
 
-**Database:** PostgreSQL 16
+**Database:** PostgreSQL 16.2
 
 **Why PostgreSQL?** Structured data with filters (completed, dueDate range, text search) and typed fields. Relational constraints, ACID, `text[]` arrays for tags out of the box. `ILIKE` covers search without extra services. For a todo app with predictable schema and filters, SQL fits better than MongoDB — no need to duplicate validation in app code.
 
@@ -29,7 +29,7 @@
 ## Migrations
 ━━━━━━━━━━━━━━━━━━━━
 
-**Tool:** golang-migrate — versioned SQL files (up/down) in `migrations/`.
+**Tool:** [golang-migrate v4.19.1](https://github.com/golang-migrate/migrate) — versioned SQL files (up/down) in `migrations/`.
 
 **Why not GORM AutoMigrate?** No down-migrations, no version control on schema, can silently drop data on column renames. golang-migrate files can be reviewed in PRs, rolled back, and replayed on any environment.
 
@@ -104,7 +104,7 @@ docker compose up --build -d
 
 | Service | Description |
 |---|---|
-| **db** | PostgreSQL 16, port 5432 |
+| **db** | PostgreSQL 16.2, port 5432 |
 | **migrate** | Runs migrations and exits |
 | **api** | Go server, port 8080 |
 
