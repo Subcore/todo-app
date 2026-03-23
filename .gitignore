@@ -17,6 +17,7 @@ api
 # Build
 dist/
 
+README copy.md
 .claude
 
 Small To-Do App.md
