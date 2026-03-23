@@ -288,6 +288,114 @@ func TestTodoHandler_DeleteCompleted(t *testing.T) {
 	})
 }
 
+func boolPtr(b bool) *bool { return &b }
+
+func TestTodoHandler_Get_InvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockSvc := new(MockTodoService)
+	h := NewTodoHandler(mockSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = []gin.Param{{Key: "id", Value: "abc"}}
+	c.Request = httptest.NewRequest(http.MethodGet, "/todos/abc", nil)
+
+	h.Get(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "invalid ID", resp["error"])
+	mockSvc.AssertNotCalled(t, "GetTodo")
+}
+
+func TestTodoHandler_Update_InvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockSvc := new(MockTodoService)
+	h := NewTodoHandler(mockSvc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = []gin.Param{{Key: "id", Value: "abc"}}
+
+	reqBody := `{"title": "Updated"}`
+	c.Request = httptest.NewRequest(http.MethodPut, "/todos/abc", bytes.NewBufferString(reqBody))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.Update(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "invalid ID", resp["error"])
+	mockSvc.AssertNotCalled(t, "UpdateTodo")
+}
+
+func TestTodoHandler_Delete_InvalidID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	t.Run("non-numeric id", func(t *testing.T) {
+		mockSvc := new(MockTodoService)
+		h := NewTodoHandler(mockSvc)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "abc"}}
+		c.Request = httptest.NewRequest(http.MethodDelete, "/todos/abc", nil)
+
+		h.Delete(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		var resp map[string]string
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+		assert.Equal(t, "invalid ID", resp["error"])
+		mockSvc.AssertNotCalled(t, "DeleteTodo")
+	})
+
+	t.Run("negative id", func(t *testing.T) {
+		mockSvc := new(MockTodoService)
+		h := NewTodoHandler(mockSvc)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = []gin.Param{{Key: "id", Value: "-1"}}
+		c.Request = httptest.NewRequest(http.MethodDelete, "/todos/-1", nil)
+
+		h.Delete(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		mockSvc.AssertNotCalled(t, "DeleteTodo")
+	})
+}
+
+func TestTodoHandler_GetAll_WithQueryParams(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	mockSvc := new(MockTodoService)
+	h := NewTodoHandler(mockSvc)
+
+	expectedFilter := model.TodoFilter{
+		Completed: boolPtr(true),
+		Search:    "test",
+	}
+	mockSvc.On("GetAllTodos", mock.Anything, expectedFilter).
+		Return([]model.Todo{{ID: 1, Title: "test todo", Completed: true}}, nil)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/todos?completed=true&search=test", nil)
+
+	h.GetAll(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp []model.Todo
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Len(t, resp, 1)
+	mockSvc.AssertExpectations(t)
+}
+
 func TestTodoHandler_GetDeleted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
