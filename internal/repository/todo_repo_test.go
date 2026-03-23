@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// setupRepoDB подключается к тестовой базе, прогоняет миграции, очищает таблицу
+// и регистрирует очистку после теста. Пропускает тест если TEST_DB_DSN не задан.
 func setupRepoDB(t *testing.T) (TodoRepository, *gorm.DB) {
 	dsn := os.Getenv("TEST_DB_DSN")
 	if dsn == "" {
@@ -25,6 +27,7 @@ func setupRepoDB(t *testing.T) (TodoRepository, *gorm.DB) {
 	err = db.AutoMigrate(&model.Todo{})
 	require.NoError(t, err)
 
+	// Начинаем каждый тест с чистой таблицей чтобы тесты не мешали друг другу
 	err = db.Exec("TRUNCATE todos RESTART IDENTITY CASCADE").Error
 	require.NoError(t, err)
 
@@ -36,25 +39,27 @@ func setupRepoDB(t *testing.T) (TodoRepository, *gorm.DB) {
 	return repo, db
 }
 
+// boolPtr нужен чтобы получить указатель на булев литерал — для необязательных полей фильтра
 func boolPtr(b bool) *bool {
 	return &b
 }
 
+// timePtr нужен чтобы получить указатель на time.Time — для необязательных полей фильтра
 func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
+// Проверяем что каждая комбинация фильтров (статус, поиск, дата) возвращает ровно те задачи что ожидаются
 func TestTodoRepository_GetAll_Filters(t *testing.T) {
 	now := time.Now()
 	past := now.Add(-24 * time.Hour)
 	future := now.Add(24 * time.Hour)
 
-	// Общий seed для всех подтестов — сеется один раз в каждом t.Run.
-	// Структура seed покрывает все кейсы:
-	//   - "Buy groceries": active, no due_date
-	//   - "Buy milk":      active, due=past
-	//   - "Write tests":   completed, due=future
-	//   - "Test feature":  active, due=future
+	// Один набор seed-данных покрывает все случаи:
+	//   - "Buy groceries": активная, без срока
+	//   - "Buy milk":      активная, срок в прошлом
+	//   - "Write tests":   выполненная, срок в будущем
+	//   - "Test feature":  активная, срок в будущем
 	type seedTodo struct {
 		title     string
 		completed bool
@@ -136,7 +141,7 @@ func TestTodoRepository_GetAll_Filters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo, db := setupRepoDB(t)
 
-			// Seed
+			// Заполняем таблицу seed-данными перед каждым подтестом
 			var todos []model.Todo
 			for _, s := range seed {
 				todos = append(todos, model.Todo{
@@ -168,11 +173,12 @@ func TestTodoRepository_GetAll_Filters(t *testing.T) {
 	}
 }
 
+// Проверяем что Delete помечает запись как удалённую — она пропадает из GetByID но появляется в GetDeleted
 func TestTodoRepository_Delete_SoftDelete(t *testing.T) {
 	repo, db := setupRepoDB(t)
 	ctx := context.Background()
 
-	// Seed: create one todo
+	// Seed: создаём одну задачу для удаления
 	todo := model.Todo{Title: "Task to delete"}
 	require.NoError(t, db.Create(&todo).Error)
 
@@ -180,11 +186,11 @@ func TestTodoRepository_Delete_SoftDelete(t *testing.T) {
 	err := repo.Delete(ctx, todo.ID)
 	require.NoError(t, err)
 
-	// Assert: GetByID returns ErrNotFound
+	// Удалённая задача не должна быть видна через обычный поиск
 	_, err = repo.GetByID(ctx, todo.ID)
 	assert.ErrorIs(t, err, ErrNotFound)
 
-	// Assert: GetDeleted contains it and it has non-empty deleted_at
+	// Удалённая задача должна появиться в GetDeleted с непустым временем удаления
 	deletedTodos, err := repo.GetDeleted(ctx)
 	require.NoError(t, err)
 	require.Len(t, deletedTodos, 1)
@@ -194,11 +200,12 @@ func TestTodoRepository_Delete_SoftDelete(t *testing.T) {
 	assert.NotZero(t, deletedTodos[0].DeletedAt.Time)
 }
 
+// Проверяем что DeleteCompleted мягко удаляет все выполненные задачи не трогая активные
 func TestTodoRepository_DeleteCompleted(t *testing.T) {
 	repo, db := setupRepoDB(t)
 	ctx := context.Background()
 
-	// Seed: 2 completed, 1 active
+	// Seed: 2 выполненные и 1 активная — должны удалиться только выполненные
 	todos := []model.Todo{
 		{Title: "Task 1", Completed: true},
 		{Title: "Task 2", Completed: true},
@@ -210,38 +217,38 @@ func TestTodoRepository_DeleteCompleted(t *testing.T) {
 	err := repo.DeleteCompleted(ctx)
 	require.NoError(t, err)
 
-	// Assert: GetAll returns only 1 active
+	// В обычном списке должна остаться только 1 активная задача
 	remaining, err := repo.GetAll(ctx, model.TodoFilter{})
 	require.NoError(t, err)
 	assert.Len(t, remaining, 1)
 	assert.Equal(t, "Task 3", remaining[0].Title)
 	assert.False(t, remaining[0].Completed)
 
-	// Assert: GetDeleted returns 2 tasks
+	// В списке удалённых должны появиться 2 задачи
 	deletedTodos, err := repo.GetDeleted(ctx)
 	require.NoError(t, err)
 	assert.Len(t, deletedTodos, 2)
 }
 
+// Проверяем что удаление несуществующего ID возвращает ErrNotFound
 func TestTodoRepository_Delete_NotFound(t *testing.T) {
 	repo, _ := setupRepoDB(t)
 	ctx := context.Background()
 
-	// Call: Delete non-existent ID
+	// Пытаемся удалить ID который никогда не создавался
 	err := repo.Delete(ctx, 999999)
 
-	// Assert
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 
+// Проверяем что GetDeleted возвращает пустой срез когда ничего не удалялось
 func TestTodoRepository_GetDeleted_Empty(t *testing.T) {
 	repo, _ := setupRepoDB(t)
 	ctx := context.Background()
 
-	// Call: GetDeleted on empty DB
+	// Задачи не создавались и не удалялись — ждём пустой результат, не ошибку
 	deletedTodos, err := repo.GetDeleted(ctx)
 
-	// Assert
 	require.NoError(t, err)
 	assert.Empty(t, deletedTodos)
 }

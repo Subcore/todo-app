@@ -14,15 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// TestAPI_Healthz verifies the full HTTP stack: router → handler → response.
-// Runs without a database.
+// Проверяем весь HTTP-стек от роутера до ответа — без базы данных
 func TestAPI_Healthz(t *testing.T) {
 	r := router.SetupRouter(nil)
 	srv := httptest.NewServer(r)
@@ -39,7 +37,7 @@ func TestAPI_Healthz(t *testing.T) {
 	assert.Equal(t, "ok", body["status"])
 }
 
-// TestAPI_Readyz_NoDB verifies the readiness endpoint returns 503 when no DB is configured.
+// Проверяем что /readyz возвращает 503 когда база не настроена
 func TestAPI_Readyz_NoDB(t *testing.T) {
 	r := router.SetupRouter(nil)
 	srv := httptest.NewServer(r)
@@ -52,8 +50,7 @@ func TestAPI_Readyz_NoDB(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
 
-// TestAPI_Readyz_WithDB verifies that /readyz returns 200 {"status":"ok"} when the DB is reachable.
-// Critical for Kubernetes readiness probes.
+// Проверяем что /readyz возвращает 200 {"status":"ok"} когда база доступна — важно для Kubernetes-проб готовности
 func TestAPI_Readyz_WithDB(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -72,9 +69,7 @@ func TestAPI_Readyz_WithDB(t *testing.T) {
 	assert.Equal(t, "ok", body["status"])
 }
 
-
-
-// TestAPI_CRUD_Todo tests the full create → list → verify lifecycle over real HTTP.
+// Проверяем полный цикл создание → список → получение → удаление через реальный HTTP
 func TestAPI_CRUD_Todo(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -120,6 +115,7 @@ func TestAPI_CRUD_Todo(t *testing.T) {
 	assert.True(t, found, "created todo must appear in GET /api/v1/todos")
 
 	// --- GET /api/v1/todos/:id → 200 ---
+	// JSON декодирует числа как float64, поэтому конвертируем перед сборкой URL
 	idFloat, ok := id.(float64)
 	require.True(t, ok, "id must be a number")
 	idURL := fmt.Sprintf("%s/%.0f", base, idFloat)
@@ -155,7 +151,7 @@ func TestAPI_CRUD_Todo(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, delResp2.StatusCode)
 }
 
-// TestAPI_CreateTodo_EmptyTitle verifies that creating a todo with empty title returns 400.
+// Проверяем что создание задачи с пустым заголовком возвращает 400
 func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -163,7 +159,7 @@ func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
-	// Empty string title
+	// Пустая строка в заголовке — должна отклоняться
 	resp, err := srv.Client().Post(
 		srv.URL+"/api/v1/todos",
 		"application/json",
@@ -175,7 +171,7 @@ func TestAPI_CreateTodo_EmptyTitle(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
-// TestAPI_CreateTodo_MissingBody verifies that sending no body returns 400.
+// Проверяем что запрос без тела возвращает 400
 func TestAPI_CreateTodo_MissingBody(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -194,7 +190,7 @@ func TestAPI_CreateTodo_MissingBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
-// TestAPI_GetTodo_NotFound verifies that fetching a non-existent todo returns 404.
+// Проверяем что запрос несуществующей задачи возвращает 404
 func TestAPI_GetTodo_NotFound(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -209,7 +205,7 @@ func TestAPI_GetTodo_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-// TestAPI_Todos_FilterByCompleted verifies that GET /api/v1/todos?completed=true returns only completed todos.
+// Проверяем что GET /api/v1/todos?completed=true возвращает только выполненные задачи
 func TestAPI_Todos_FilterByCompleted(t *testing.T) {
 	db := setupTestDB(t)
 	r := router.SetupRouter(db)
@@ -219,7 +215,7 @@ func TestAPI_Todos_FilterByCompleted(t *testing.T) {
 	client := srv.Client()
 	base := srv.URL + "/api/v1/todos"
 
-	// Create 3 todos
+	// Создаём 3 задачи — выполним только одну, чтобы убедиться что фильтр не пропускает лишнее
 	titles := []string{"Todo A", "Todo B", "Todo C"}
 	ids := make([]float64, 0, 3)
 	for _, title := range titles {
@@ -244,7 +240,7 @@ func TestAPI_Todos_FilterByCompleted(t *testing.T) {
 	putResp.Body.Close()
 	require.Equal(t, http.StatusOK, putResp.StatusCode)
 
-	// GET ?completed=true
+	// GET ?completed=true — в ответе должна быть только "Todo B"
 	getResp, err := client.Get(base + "?completed=true")
 	require.NoError(t, err)
 	defer getResp.Body.Close()
@@ -256,7 +252,7 @@ func TestAPI_Todos_FilterByCompleted(t *testing.T) {
 	assert.Equal(t, "Todo B", todos[0]["title"])
 }
 
-// TestAPI_Todos_FilterBySearch verifies that GET /api/v1/todos?search=buy returns matching todos (case-insensitive).
+// Проверяем что GET /api/v1/todos?search=buy возвращает подходящие задачи без учёта регистра
 func TestAPI_Todos_FilterBySearch(t *testing.T) {
 	db := setupTestDB(t)
 	r := router.SetupRouter(db)
@@ -266,6 +262,7 @@ func TestAPI_Todos_FilterBySearch(t *testing.T) {
 	client := srv.Client()
 	base := srv.URL + "/api/v1/todos"
 
+	// Две задачи: одна совпадает с поисковым словом, другая нет
 	for _, title := range []string{"Buy groceries", "Write tests"} {
 		body := fmt.Sprintf(`{"title":%q}`, title)
 		resp, err := client.Post(base, "application/json", bytes.NewBufferString(body))
@@ -274,6 +271,7 @@ func TestAPI_Todos_FilterBySearch(t *testing.T) {
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
 	}
 
+	// Поиск "buy" в нижнем регистре должен найти "Buy groceries" (без учёта регистра)
 	getResp, err := client.Get(base + "?search=buy")
 	require.NoError(t, err)
 	defer getResp.Body.Close()
@@ -285,7 +283,7 @@ func TestAPI_Todos_FilterBySearch(t *testing.T) {
 	assert.Equal(t, "Buy groceries", todos[0]["title"])
 }
 
-// TestAPI_Todos_FilterByDueDate verifies that GET /api/v1/todos?due_before=<date> returns only earlier todos.
+// Проверяем что GET /api/v1/todos?due_before=<дата> возвращает только задачи с более ранним сроком
 func TestAPI_Todos_FilterByDueDate(t *testing.T) {
 	db := setupTestDB(t)
 	r := router.SetupRouter(db)
@@ -295,7 +293,7 @@ func TestAPI_Todos_FilterByDueDate(t *testing.T) {
 	client := srv.Client()
 	base := srv.URL + "/api/v1/todos"
 
-	// Two todos with different due dates
+	// Две задачи с разными датами: earlyDate до middleDate, lateDate после
 	earlyDate := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	lateDate := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 	middleDate := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
@@ -310,7 +308,7 @@ func TestAPI_Todos_FilterByDueDate(t *testing.T) {
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
 	}
 
-	// Filter: due_before=middleDate → should return only "Early Todo"
+	// Filter: due_before=middleDate → должна вернуться только "Early Todo"
 	dueBefore := middleDate.Format(time.RFC3339)
 	getResp, err := client.Get(base + "?due_before=" + dueBefore)
 	require.NoError(t, err)
@@ -323,7 +321,7 @@ func TestAPI_Todos_FilterByDueDate(t *testing.T) {
 	assert.Equal(t, "Early Todo", todos[0]["title"])
 }
 
-// TestAPI_ClearCompleted verifies that POST /api/v1/todos/clear-completed soft-deletes all completed todos.
+// Проверяем что POST /api/v1/todos/clear-completed мягко удаляет все выполненные задачи
 func TestAPI_ClearCompleted(t *testing.T) {
 	db := setupTestDB(t)
 	r := router.SetupRouter(db)
@@ -333,7 +331,7 @@ func TestAPI_ClearCompleted(t *testing.T) {
 	client := srv.Client()
 	base := srv.URL + "/api/v1/todos"
 
-	// Create 3 todos
+	// Три задачи: одну оставляем активной, две выполним и затем удалим
 	titles := []string{"Keep this", "Done 1", "Done 2"}
 	ids := make([]float64, 0, 3)
 	for _, title := range titles {
@@ -366,7 +364,7 @@ func TestAPI_ClearCompleted(t *testing.T) {
 	clearResp.Body.Close()
 	assert.Equal(t, http.StatusNoContent, clearResp.StatusCode)
 
-	// GET /api/v1/todos → only 1 non-deleted todo remains
+	// GET /api/v1/todos → должна остаться только 1 невыполненная задача
 	getResp, err := client.Get(base)
 	require.NoError(t, err)
 	defer getResp.Body.Close()
@@ -377,7 +375,7 @@ func TestAPI_ClearCompleted(t *testing.T) {
 	require.Len(t, remaining, 1)
 	assert.Equal(t, "Keep this", remaining[0]["title"])
 
-	// GET /api/v1/todos/deleted → 2 soft-deleted todos
+	// GET /api/v1/todos/deleted → удалённые 2 задачи должны быть здесь
 	deletedResp, err := client.Get(base + "/deleted")
 	require.NoError(t, err)
 	defer deletedResp.Body.Close()

@@ -66,13 +66,17 @@ func (m *MockTodoService) GetDeletedTodos(ctx context.Context) ([]model.Todo, er
 	return args.Get(0).([]model.Todo), args.Error(1)
 }
 
+// Проверяем что POST /todos создаёт задачу и возвращает 201, а при отсутствии заголовка — 400
 func TestTodoHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Нормальный заголовок — задача создаётся, ответ 201 с данными задачи
 	t.Run("success", func(t *testing.T) {
+		// Подставляем фейковый сервис вместо настоящего
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: когда вызовут CreateTodo с "Test Todo" — вернуть объект задачи
 		mockSvc.On("CreateTodo", mock.Anything, "Test Todo", (*time.Time)(nil), ([]string)(nil)).
 			Return(&model.Todo{ID: 1, Title: "Test Todo", Completed: false}, nil)
 
@@ -90,9 +94,11 @@ func TestTodoHandler_Create(t *testing.T) {
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "Test Todo", resp.Title)
 		assert.Equal(t, uint(1), resp.ID)
+		// Проверяем что фейк вызвали именно так, как договаривались
 		mockSvc.AssertExpectations(t)
 	})
 
+	// Тело запроса без заголовка должно отклоняться до вызова сервиса
 	t.Run("bad request - missing title", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
@@ -107,18 +113,21 @@ func TestTodoHandler_Create(t *testing.T) {
 		h.Create(c)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
-
+		// Проверяем что до сервиса дело не дошло
 		mockSvc.AssertNotCalled(t, "CreateTodo")
 	})
 }
 
+// Проверяем что GET /todos/:id возвращает задачу при успехе и 404 если не найдена
 func TestTodoHandler_Get(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Существующий ID — ответ 200 с данными задачи
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: вернуть задачу при запросе ID=1
 		mockSvc.On("GetTodo", mock.Anything, uint(1)).
 			Return(&model.Todo{ID: 1, Title: "Test Todo", Completed: false}, nil)
 
@@ -136,10 +145,12 @@ func TestTodoHandler_Get(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
+	// Запрос несуществующей задачи — ответ 404
 	t.Run("not found", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: задача 999 не существует
 		mockSvc.On("GetTodo", mock.Anything, uint(999)).
 			Return(nil, repository.ErrNotFound)
 
@@ -155,13 +166,16 @@ func TestTodoHandler_Get(t *testing.T) {
 	})
 }
 
+// Проверяем что GET /todos возвращает полный список задач
 func TestTodoHandler_GetAll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// В базе две задачи — обе должны попасть в ответ
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: вернуть две задачи при пустом фильтре
 		mockSvc.On("GetAllTodos", mock.Anything, model.TodoFilter{}).
 			Return([]model.Todo{{ID: 1, Title: "Todo 1"}, {ID: 2, Title: "Todo 2"}}, nil)
 
@@ -179,14 +193,17 @@ func TestTodoHandler_GetAll(t *testing.T) {
 	})
 }
 
+// Проверяем что PUT /todos/:id обновляет задачу и возвращает 200, или 404 если не найдена
 func TestTodoHandler_Update(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Заголовок и статус обновляются — ответ отражает изменения
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
 		trueVal := true
+		// Говорим фейку: принять обновление ID=1 с новым заголовком и completed=true
 		mockSvc.On("UpdateTodo", mock.Anything, uint(1), "Updated Todo", &trueVal, (*time.Time)(nil), ([]string)(nil)).
 			Return(&model.Todo{ID: 1, Title: "Updated Todo", Completed: true}, nil)
 
@@ -208,10 +225,12 @@ func TestTodoHandler_Update(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
+	// Обновление несуществующей задачи — ответ 404
 	t.Run("not found", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: задача 999 не существует
 		mockSvc.On("UpdateTodo", mock.Anything, uint(999), "Title", (*bool)(nil), (*time.Time)(nil), ([]string)(nil)).
 			Return(nil, repository.ErrNotFound)
 
@@ -230,13 +249,16 @@ func TestTodoHandler_Update(t *testing.T) {
 	})
 }
 
+// Проверяем что DELETE /todos/:id помечает задачу как удалённую и возвращает 204, или 404 если не найдена
 func TestTodoHandler_Delete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Существующая задача удаляется — ответ 204 без тела
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: удаление задачи 1 проходит успешно
 		mockSvc.On("DeleteTodo", mock.Anything, uint(1)).Return(nil)
 
 		w := httptest.NewRecorder()
@@ -250,10 +272,12 @@ func TestTodoHandler_Delete(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
+	// Удаление несуществующей задачи — ответ 404
 	t.Run("not found", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: задача 999 не существует
 		mockSvc.On("DeleteTodo", mock.Anything, uint(999)).Return(repository.ErrNotFound)
 
 		w := httptest.NewRecorder()
@@ -268,13 +292,16 @@ func TestTodoHandler_Delete(t *testing.T) {
 	})
 }
 
+// Проверяем что POST /todos/clear-completed возвращает 204 при успехе
 func TestTodoHandler_DeleteCompleted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Все выполненные задачи помечаются как удалённые — ответ 204
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: удаление выполненных задач проходит успешно
 		mockSvc.On("DeleteCompletedTodos", mock.Anything).Return(nil)
 
 		w := httptest.NewRecorder()
@@ -288,8 +315,10 @@ func TestTodoHandler_DeleteCompleted(t *testing.T) {
 	})
 }
 
+// boolPtr нужен чтобы получить указатель на булев литерал — в Go нельзя взять адрес у литерала напрямую
 func boolPtr(b bool) *bool { return &b }
 
+// Проверяем что нечисловой ID в URL возвращает 400 до вызова сервиса
 func TestTodoHandler_Get_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -307,9 +336,11 @@ func TestTodoHandler_Get_InvalidID(t *testing.T) {
 	var resp map[string]string
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "invalid ID", resp["error"])
+	// Проверяем что до сервиса дело не дошло
 	mockSvc.AssertNotCalled(t, "GetTodo")
 }
 
+// Проверяем что нечисловой ID при обновлении возвращает 400 до вызова сервиса
 func TestTodoHandler_Update_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -330,12 +361,15 @@ func TestTodoHandler_Update_InvalidID(t *testing.T) {
 	var resp map[string]string
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, "invalid ID", resp["error"])
+	// Проверяем что до сервиса дело не дошло
 	mockSvc.AssertNotCalled(t, "UpdateTodo")
 }
 
+// Проверяем что нечисловой и отрицательный ID при удалении отклоняются с кодом 400
 func TestTodoHandler_Delete_InvalidID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Строка "abc" — не валидный ID
 	t.Run("non-numeric id", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
@@ -351,9 +385,11 @@ func TestTodoHandler_Delete_InvalidID(t *testing.T) {
 		var resp map[string]string
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 		assert.Equal(t, "invalid ID", resp["error"])
+		// Проверяем что до сервиса дело не дошло
 		mockSvc.AssertNotCalled(t, "DeleteTodo")
 	})
 
+	// Отрицательное число парсится, но не является допустимым ID сущности
 	t.Run("negative id", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
@@ -370,16 +406,19 @@ func TestTodoHandler_Delete_InvalidID(t *testing.T) {
 	})
 }
 
+// Проверяем что query-параметры разбираются в фильтр и передаются в сервис
 func TestTodoHandler_GetAll_WithQueryParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockSvc := new(MockTodoService)
 	h := NewTodoHandler(mockSvc)
 
+	// Хэндлер должен собрать именно такой фильтр из строки запроса
 	expectedFilter := model.TodoFilter{
 		Completed: boolPtr(true),
 		Search:    "test",
 	}
+	// Говорим фейку: вернуть одну подходящую задачу для заданного фильтра
 	mockSvc.On("GetAllTodos", mock.Anything, expectedFilter).
 		Return([]model.Todo{{ID: 1, Title: "test todo", Completed: true}}, nil)
 
@@ -396,13 +435,16 @@ func TestTodoHandler_GetAll_WithQueryParams(t *testing.T) {
 	mockSvc.AssertExpectations(t)
 }
 
+// Проверяем что GET /todos/deleted возвращает список мягко удалённых задач
 func TestTodoHandler_GetDeleted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Одна удалённая задача — должна вернуться в ответе
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockTodoService)
 		h := NewTodoHandler(mockSvc)
 
+		// Говорим фейку: вернуть одну мягко удалённую задачу
 		mockSvc.On("GetDeletedTodos", mock.Anything).
 			Return([]model.Todo{{ID: 1, Title: "Deleted Todo 1"}}, nil)
 

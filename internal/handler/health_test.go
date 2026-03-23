@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Проверяем что GET /healthz всегда возвращает 200 {"status":"ok"}
 func TestHealthHandler_Healthz(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
@@ -23,15 +24,13 @@ func TestHealthHandler_Healthz(t *testing.T) {
 	assert.JSONEq(t, `{"status":"ok"}`, w.Body.String())
 }
 
-// Note: Testing Readyz with a real DB connection failure is tricky without mocks.
-// For now, I'll just verify the 200 case if I can, and skip the 503 if no mock is available.
-// But wait, I can use a mock or a nil DB to see how it behaves.
+// Проверяем что GET /readyz возвращает 503 когда база не настроена
 func TestHealthHandler_Readyz_Fail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	
-	// With the nil check added, it should not panic but return 503
-	h := NewHealthHandler(nil) 
+
+	// Передаём nil вместо базы — это активирует путь "недоступно" без паники
+	h := NewHealthHandler(nil)
 	r.GET("/readyz", h.Readyz)
 
 	w := httptest.NewRecorder()
