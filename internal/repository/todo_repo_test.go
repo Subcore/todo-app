@@ -115,7 +115,7 @@ func TestTodoRepository_GetAll_FilterByDueBefore(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: returns only the past task (due_date < today)
-	assert.Len(t, result, 1)
+	require.Len(t, result, 1)
 	assert.Equal(t, "Past Task", result[0].Title)
 }
 
@@ -142,7 +142,7 @@ func TestTodoRepository_GetAll_FilterByDueAfter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert: returns only the future task (due_date > today)
-	assert.Len(t, result, 1)
+	require.Len(t, result, 1)
 	assert.Equal(t, "Future Task", result[0].Title)
 }
 
@@ -193,4 +193,82 @@ func TestTodoRepository_GetAll_NoFilters(t *testing.T) {
 
 	// Assert: len == 3
 	assert.Len(t, result, 3)
+}
+
+func TestTodoRepository_Delete_SoftDelete(t *testing.T) {
+	repo, db := setupRepoDB(t)
+	ctx := context.Background()
+
+	// Seed: create one todo
+	todo := model.Todo{Title: "Task to delete"}
+	require.NoError(t, db.Create(&todo).Error)
+
+	// Call: Delete
+	err := repo.Delete(ctx, todo.ID)
+	require.NoError(t, err)
+
+	// Assert: GetByID returns ErrNotFound
+	_, err = repo.GetByID(ctx, todo.ID)
+	assert.ErrorIs(t, err, ErrNotFound)
+
+	// Assert: GetDeleted contains it and it has non-empty deleted_at
+	deletedTodos, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	require.Len(t, deletedTodos, 1)
+
+	assert.Equal(t, todo.ID, deletedTodos[0].ID)
+	assert.True(t, deletedTodos[0].DeletedAt.Valid)
+	assert.NotZero(t, deletedTodos[0].DeletedAt.Time)
+}
+
+func TestTodoRepository_DeleteCompleted(t *testing.T) {
+	repo, db := setupRepoDB(t)
+	ctx := context.Background()
+
+	// Seed: 2 completed, 1 active
+	todos := []model.Todo{
+		{Title: "Task 1", Completed: true},
+		{Title: "Task 2", Completed: true},
+		{Title: "Task 3", Completed: false},
+	}
+	require.NoError(t, db.Create(&todos).Error)
+
+	// Call: DeleteCompleted
+	err := repo.DeleteCompleted(ctx)
+	require.NoError(t, err)
+
+	// Assert: GetAll returns only 1 active
+	remaining, err := repo.GetAll(ctx, model.TodoFilter{})
+	require.NoError(t, err)
+	assert.Len(t, remaining, 1)
+	assert.Equal(t, "Task 3", remaining[0].Title)
+	assert.False(t, remaining[0].Completed)
+
+	// Assert: GetDeleted returns 2 tasks
+	deletedTodos, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	assert.Len(t, deletedTodos, 2)
+}
+
+func TestTodoRepository_Delete_NotFound(t *testing.T) {
+	repo, _ := setupRepoDB(t)
+	ctx := context.Background()
+
+	// Call: Delete non-existent ID
+	err := repo.Delete(ctx, 999999)
+
+	// Assert
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestTodoRepository_GetDeleted_Empty(t *testing.T) {
+	repo, _ := setupRepoDB(t)
+	ctx := context.Background()
+
+	// Call: GetDeleted on empty DB
+	deletedTodos, err := repo.GetDeleted(ctx)
+
+	// Assert
+	require.NoError(t, err)
+	assert.Empty(t, deletedTodos)
 }
