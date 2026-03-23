@@ -44,155 +44,128 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
-func TestTodoRepository_GetAll_FilterByCompleted(t *testing.T) {
-	repo, db := setupRepoDB(t)
-
-	// Seed: create 3 todo -- 2 completed, 1 active
-	todos := []model.Todo{
-		{Title: "Task 1", Completed: true},
-		{Title: "Task 2", Completed: true},
-		{Title: "Task 3", Completed: false},
-	}
-	require.NoError(t, db.Create(&todos).Error)
-
-	ctx := context.Background()
-
-	// Call: filter by completed=true
-	result, err := repo.GetAll(ctx, model.TodoFilter{Completed: boolPtr(true)})
-	require.NoError(t, err)
-
-	// Assert: len == 2, all completed == true
-	assert.Len(t, result, 2)
-	for _, todo := range result {
-		assert.True(t, todo.Completed)
-	}
-}
-
-func TestTodoRepository_GetAll_FilterBySearch(t *testing.T) {
-	repo, db := setupRepoDB(t)
-
-	// Seed: "Buy groceries", "Write tests", "Buy milk"
-	todos := []model.Todo{
-		{Title: "Buy groceries"},
-		{Title: "Write tests"},
-		{Title: "Buy milk"},
-	}
-	require.NoError(t, db.Create(&todos).Error)
-
-	ctx := context.Background()
-
-	// Call
-	result, err := repo.GetAll(ctx, model.TodoFilter{Search: "buy"})
-	require.NoError(t, err)
-
-	// Assert: len == 2, both contain "buy" case-insensitive
-	assert.Len(t, result, 2)
-	titles := []string{result[0].Title, result[1].Title}
-	assert.Contains(t, titles, "Buy groceries")
-	assert.Contains(t, titles, "Buy milk")
-}
-
-func TestTodoRepository_GetAll_FilterByDueBefore(t *testing.T) {
-	repo, db := setupRepoDB(t)
-
+func TestTodoRepository_GetAll_Filters(t *testing.T) {
 	now := time.Now()
 	past := now.Add(-24 * time.Hour)
-	today := now
 	future := now.Add(24 * time.Hour)
 
-	// Seed: 3 todo with different due_date (past, today, future)
-	todos := []model.Todo{
-		{Title: "Past Task", DueDate: timePtr(past)},
-		{Title: "Today Task", DueDate: timePtr(today)},
-		{Title: "Future Task", DueDate: timePtr(future)},
+	// Общий seed для всех подтестов — сеется один раз в каждом t.Run.
+	// Структура seed покрывает все кейсы:
+	//   - "Buy groceries": active, no due_date
+	//   - "Buy milk":      active, due=past
+	//   - "Write tests":   completed, due=future
+	//   - "Test feature":  active, due=future
+	type seedTodo struct {
+		title     string
+		completed bool
+		dueDate   *time.Time
 	}
-	require.NoError(t, db.Create(&todos).Error)
-
-	ctx := context.Background()
-
-	// Call: with DueBefore = today
-	result, err := repo.GetAll(ctx, model.TodoFilter{DueBefore: timePtr(today)})
-	require.NoError(t, err)
-
-	// Assert: returns only the past task (due_date < today)
-	require.Len(t, result, 1)
-	assert.Equal(t, "Past Task", result[0].Title)
-}
-
-func TestTodoRepository_GetAll_FilterByDueAfter(t *testing.T) {
-	repo, db := setupRepoDB(t)
-
-	now := time.Now()
-	past := now.Add(-24 * time.Hour)
-	today := now
-	future := now.Add(24 * time.Hour)
-
-	// Seed
-	todos := []model.Todo{
-		{Title: "Past Task", DueDate: timePtr(past)},
-		{Title: "Today Task", DueDate: timePtr(today)},
-		{Title: "Future Task", DueDate: timePtr(future)},
+	seed := []seedTodo{
+		{"Buy groceries", false, nil},
+		{"Buy milk", false, timePtr(past)},
+		{"Write tests", true, timePtr(future)},
+		{"Test feature", false, timePtr(future)},
 	}
-	require.NoError(t, db.Create(&todos).Error)
 
-	ctx := context.Background()
-
-	// Call: with DueAfter = today
-	result, err := repo.GetAll(ctx, model.TodoFilter{DueAfter: timePtr(today)})
-	require.NoError(t, err)
-
-	// Assert: returns only the future task (due_date > today)
-	require.Len(t, result, 1)
-	assert.Equal(t, "Future Task", result[0].Title)
-}
-
-func TestTodoRepository_GetAll_CombinedFilters(t *testing.T) {
-	repo, db := setupRepoDB(t)
-
-	now := time.Now()
-	future := now.Add(24 * time.Hour)
-
-	// Seed: 4 todo with different completed + due_date + title
-	todos := []model.Todo{
-		{Title: "Buy test groceries", Completed: false},
-		{Title: "Write test code", Completed: true},
-		{Title: "Buy milk", Completed: false},
-		{Title: "Test new feature", Completed: false, DueDate: timePtr(future)},
+	tests := []struct {
+		name       string
+		filter     model.TodoFilter
+		wantLen    int
+		wantTitles []string // если задано — проверяем точный набор заголовков
+	}{
+		{
+			name:       "completed=true",
+			filter:     model.TodoFilter{Completed: boolPtr(true)},
+			wantLen:    1,
+			wantTitles: []string{"Write tests"},
+		},
+		{
+			name:    "completed=false",
+			filter:  model.TodoFilter{Completed: boolPtr(false)},
+			wantLen: 3,
+		},
+		{
+			name:       "search case-insensitive «buy»",
+			filter:     model.TodoFilter{Search: "buy"},
+			wantLen:    2,
+			wantTitles: []string{"Buy groceries", "Buy milk"},
+		},
+		{
+			name:       "search «test» matches title and body",
+			filter:     model.TodoFilter{Search: "test"},
+			wantLen:    2,
+			wantTitles: []string{"Write tests", "Test feature"},
+		},
+		{
+			name:       "DueBefore=now returns only past task",
+			filter:     model.TodoFilter{DueBefore: timePtr(now)},
+			wantLen:    1,
+			wantTitles: []string{"Buy milk"},
+		},
+		{
+			name:    "DueAfter=now returns future tasks",
+			filter:  model.TodoFilter{DueAfter: timePtr(now)},
+			wantLen: 2,
+		},
+		{
+			name:    "no filters returns all",
+			filter:  model.TodoFilter{},
+			wantLen: 4,
+		},
+		{
+			name: "combined: completed=false + search «test»",
+			filter: model.TodoFilter{
+				Completed: boolPtr(false),
+				Search:    "test",
+			},
+			wantLen:    1,
+			wantTitles: []string{"Test feature"},
+		},
+		{
+			name: "combined: search «buy» + DueBefore=now",
+			filter: model.TodoFilter{
+				Search:    "buy",
+				DueBefore: timePtr(now),
+			},
+			wantLen:    1,
+			wantTitles: []string{"Buy milk"},
+		},
 	}
-	require.NoError(t, db.Create(&todos).Error)
 
-	ctx := context.Background()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo, db := setupRepoDB(t)
 
-	// Call: Completed=false, Search="test"
-	result, err := repo.GetAll(ctx, model.TodoFilter{
-		Completed: boolPtr(false),
-		Search:    "test",
-	})
-	require.NoError(t, err)
+			// Seed
+			var todos []model.Todo
+			for _, s := range seed {
+				todos = append(todos, model.Todo{
+					Title:     s.title,
+					Completed: s.completed,
+					DueDate:   s.dueDate,
+				})
+			}
+			require.NoError(t, db.Create(&todos).Error)
 
-	// Assert: exactly 2 tasks match
-	assert.Len(t, result, 2)
-}
+			// Act
+			result, err := repo.GetAll(context.Background(), tt.filter)
+			require.NoError(t, err)
 
-func TestTodoRepository_GetAll_NoFilters(t *testing.T) {
-	repo, db := setupRepoDB(t)
+			// Assert length
+			assert.Len(t, result, tt.wantLen)
 
-	// Seed: 3 todo
-	todos := []model.Todo{
-		{Title: "Task 1"},
-		{Title: "Task 2"},
-		{Title: "Task 3"},
+			// Assert exact titles (if specified)
+			if len(tt.wantTitles) > 0 {
+				got := make([]string, len(result))
+				for i, r := range result {
+					got[i] = r.Title
+				}
+				for _, want := range tt.wantTitles {
+					assert.Contains(t, got, want)
+				}
+			}
+		})
 	}
-	require.NoError(t, db.Create(&todos).Error)
-
-	ctx := context.Background()
-
-	// Call: empty filter
-	result, err := repo.GetAll(ctx, model.TodoFilter{})
-	require.NoError(t, err)
-
-	// Assert: len == 3
-	assert.Len(t, result, 3)
 }
 
 func TestTodoRepository_Delete_SoftDelete(t *testing.T) {
