@@ -52,6 +52,26 @@ func TestAPI_Readyz_NoDB(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
 
+// TestAPI_Readyz_WithDB verifies that /readyz returns 200 {"status":"ok"} when the DB is reachable.
+// Critical for Kubernetes readiness probes.
+func TestAPI_Readyz_WithDB(t *testing.T) {
+	db := setupTestDB(t)
+
+	r := router.SetupRouter(db)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/readyz")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body map[string]string
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	assert.Equal(t, "ok", body["status"])
+}
+
 
 
 // TestAPI_CRUD_Todo tests the full create → list → verify lifecycle over real HTTP.
