@@ -275,7 +275,10 @@ func TestTodoRepository_GetDeleted_Empty(t *testing.T) {
 
 // Проверяем что одновременное создание задач не приводит к гонке данных
 func TestTodoRepository_ConcurrentCreate(t *testing.T) {
-	repo, _ := setupRepoDB(t)
+	db := initTestDB(t)
+	// Используем прямое подключение, а не транзакцию —
+	// транзакция = одно соединение, параллельные INSERT через неё невозможны.
+	repo := NewTodoRepository(db)
 	ctx := context.Background()
 
 	const goroutines = 10
@@ -299,4 +302,9 @@ func TestTodoRepository_ConcurrentCreate(t *testing.T) {
 	all, err := repo.GetAll(ctx, model.TodoFilter{})
 	require.NoError(t, err)
 	assert.Len(t, all, goroutines)
+
+	// Cleanup: удаляем созданные записи
+	t.Cleanup(func() {
+		db.Exec("DELETE FROM todos WHERE title LIKE 'Concurrent task %'")
+	})
 }
