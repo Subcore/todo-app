@@ -8,17 +8,19 @@ import (
 	"gorm.io/gorm"
 )
 
+// HealthHandler обрабатывает запросы проверки состояния сервиса
 type HealthHandler struct {
 	db *gorm.DB
 }
 
+// NewHealthHandler создаёт новый обработчик проверки состояния с подключением к БД
 func NewHealthHandler(db *gorm.DB) *HealthHandler {
 	return &HealthHandler{db: db}
 }
 
 // Healthz godoc
-// @Summary Liveness probe
-// @Description Returns 200 OK if the service is alive
+// @Summary Проверка жизнеспособности
+// @Description Возвращает 200 OK если сервис запущен
 // @Tags health
 // @Produce json
 // @Success 200 {object} map[string]string
@@ -28,8 +30,8 @@ func (h *HealthHandler) Healthz(c *gin.Context) {
 }
 
 // Readyz godoc
-// @Summary Readiness probe
-// @Description Returns 200 OK if the service is ready to accept traffic (DB connection is active)
+// @Summary Проверка готовности
+// @Description Возвращает 200 OK если сервис готов принимать трафик (соединение с БД активно)
 // @Tags health
 // @Produce json
 // @Success 200 {object} map[string]string
