@@ -8,21 +8,22 @@ import (
 	"gorm.io/gorm"
 )
 
+// SetupRouter настраивает маршрутизатор с подключением к базе данных
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	// Static assets
+	// Статические ресурсы
 	r.Static("/assets", "./web/assets")
 
-	// Frontend
+	// Главная страница фронтенда
 	r.GET("/", func(c *gin.Context) {
 		c.File("./web/index.html")
 	})
 
-	// OpenAPI 3.0 spec
+	// Спецификация OpenAPI 3.0
 	r.StaticFile("/openapi.yaml", "./openapi.yaml")
 
-	// Swagger UI
+	// Страница документации Swagger UI
 	r.GET("/docs", func(c *gin.Context) {
 		c.File("./web/docs.html")
 	})
@@ -30,17 +31,17 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		c.Redirect(301, "/docs")
 	})
 
-	// Initialize layers
+	// Инициализация слоёв приложения
 	repo := repository.NewTodoRepository(db)
 	svc := service.NewTodoService(repo)
 	h := handler.NewTodoHandler(svc)
 	hh := handler.NewHealthHandler(db)
 
-	// Health endpoints
+	// Эндпоинты проверки состояния
 	r.GET("/healthz", hh.Healthz)
 	r.GET("/readyz", hh.Readyz)
 
-	// API v1
+	// API версии 1
 	api := r.Group("/api/v1")
 	{
 		todoGroup := api.Group("/todos")

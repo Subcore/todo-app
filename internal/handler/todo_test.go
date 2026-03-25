@@ -24,7 +24,7 @@ import (
 // Если интерфейс изменится — код не скомпилируется.
 var _ service.TodoService = (*MockTodoService)(nil)
 
-// MockTodoService implements service.TodoService using testify/mock
+// MockTodoService — мок-реализация service.TodoService через testify/mock
 type MockTodoService struct {
 	mock.Mock
 }

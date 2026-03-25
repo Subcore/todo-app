@@ -12,20 +12,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TodoHandler обрабатывает HTTP-запросы для работы с задачами
 type TodoHandler struct {
 	svc service.TodoService
 }
 
+// NewTodoHandler создаёт новый обработчик задач с переданным сервисом
 func NewTodoHandler(svc service.TodoService) *TodoHandler {
 	return &TodoHandler{svc: svc}
 }
 
+// createTodoRequest — тело запроса на создание задачи
 type createTodoRequest struct {
 	Title   string     `json:"title" binding:"required,max=255"`
 	DueDate *time.Time `json:"due_date"`
 	Tags    []string   `json:"tags"`
 }
 
+// updateTodoRequest — тело запроса на обновление задачи
 type updateTodoRequest struct {
 	Title     string     `json:"title" binding:"required,max=255"`
 	Completed *bool      `json:"completed"`
@@ -33,6 +37,7 @@ type updateTodoRequest struct {
 	Tags      []string   `json:"tags"`
 }
 
+// getTodosQuery — параметры запроса для фильтрации списка задач
 type getTodosQuery struct {
 	Completed *bool      `form:"completed"`
 	Search    string     `form:"search"`
@@ -41,12 +46,12 @@ type getTodosQuery struct {
 }
 
 // Create godoc
-// @Summary Create a todo
-// @Description Create a new todo item with a title
+// @Summary Создать задачу
+// @Description Создаёт новую задачу с заголовком
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Param request body createTodoRequest true "Todo request"
+// @Param request body createTodoRequest true "Тело запроса задачи"
 // @Success 201 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -68,12 +73,12 @@ func (h *TodoHandler) Create(c *gin.Context) {
 }
 
 // Get godoc
-// @Summary Get a todo by ID
-// @Description Retrieve a todo item using its ID
+// @Summary Получить задачу по ID
+// @Description Возвращает задачу по её идентификатору
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Param id path uint true "Todo ID"
+// @Param id path uint true "ID задачи"
 // @Success 200 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
@@ -100,15 +105,15 @@ func (h *TodoHandler) Get(c *gin.Context) {
 }
 
 // GetAll godoc
-// @Summary Get all todos
-// @Description Retrieve a list of all todo items
+// @Summary Получить все задачи
+// @Description Возвращает список всех задач с возможностью фильтрации
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Param completed   query bool   false "Filter by completion status"
-// @Param search      query string false "Search in title (case-insensitive)"
-// @Param due_before  query string false "Due before (RFC3339)"
-// @Param due_after   query string false "Due after (RFC3339)"
+// @Param completed   query bool   false "Фильтр по статусу выполнения"
+// @Param search      query string false "Поиск по заголовку (без учёта регистра)"
+// @Param due_before  query string false "Срок до (RFC3339)"
+// @Param due_after   query string false "Срок после (RFC3339)"
 // @Success 200 {array} model.Todo
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/todos [get]
@@ -136,13 +141,13 @@ func (h *TodoHandler) GetAll(c *gin.Context) {
 }
 
 // Update godoc
-// @Summary Update a todo
-// @Description Update title or status of a todo item
+// @Summary Обновить задачу
+// @Description Обновляет заголовок или статус задачи
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Param id path uint true "Todo ID"
-// @Param request body updateTodoRequest true "Todo update request"
+// @Param id path uint true "ID задачи"
+// @Param request body updateTodoRequest true "Тело запроса обновления задачи"
 // @Success 200 {object} model.Todo
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
@@ -176,13 +181,13 @@ func (h *TodoHandler) Update(c *gin.Context) {
 }
 
 // Delete godoc
-// @Summary Delete a todo (Soft Delete)
-// @Description Delete a todo item by its ID. This is a soft delete (using GORM's gorm.DeletedAt). The record remains in the database with a deleted_at timestamp.
+// @Summary Удалить задачу (мягкое удаление)
+// @Description Удаляет задачу по ID. Это мягкое удаление (через gorm.DeletedAt). Запись остаётся в базе с меткой времени deleted_at.
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Param id path uint true "Todo ID"
-// @Success 204 "No Content"
+// @Param id path uint true "ID задачи"
+// @Success 204 "Нет содержимого"
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -209,12 +214,12 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 }
 
 // DeleteCompleted godoc
-// @Summary Delete all completed todos (Soft Delete)
-// @Description Delete all todo items that are marked as completed. This is a soft delete (using GORM's gorm.DeletedAt).
+// @Summary Удалить все выполненные задачи (мягкое удаление)
+// @Description Удаляет все задачи со статусом «выполнено». Это мягкое удаление (через gorm.DeletedAt).
 // @Tags todos
 // @Accept json
 // @Produce json
-// @Success 204 "No Content"
+// @Success 204 "Нет содержимого"
 // @Failure 500 {object} map[string]string
 // @Router /api/v1/todos/clear-completed [post]
 func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
@@ -228,8 +233,8 @@ func (h *TodoHandler) DeleteCompleted(c *gin.Context) {
 }
 
 // GetDeleted godoc
-// @Summary Get all deleted todos
-// @Description Retrieve a list of all soft-deleted todo items
+// @Summary Получить все удалённые задачи
+// @Description Возвращает список всех мягко удалённых задач
 // @Tags todos
 // @Accept json
 // @Produce json

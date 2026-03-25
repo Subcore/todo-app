@@ -15,7 +15,7 @@ import (
 // Проверка на этапе компиляции: MockRepository реализует repository.TodoRepository.
 var _ repository.TodoRepository = (*MockRepository)(nil)
 
-// MockRepository is a mock of TodoRepository
+// MockRepository — мок-реализация TodoRepository
 type MockRepository struct {
 	mock.Mock
 }
@@ -281,7 +281,7 @@ func TestTodoService_UpdateTodo_NilTagsPreserveExisting(t *testing.T) {
 		return todo.ID == 7 && len(todo.Tags) == 2
 	})).Return(nil)
 
-	// tags=nil → tags should remain ["work", "urgent"]
+	// tags=nil → теги должны остаться ["work", "urgent"]
 	todo, err := svc.UpdateTodo(ctx, 7, "Has Tags", nil, nil, nil)
 
 	assert.NoError(t, err)
