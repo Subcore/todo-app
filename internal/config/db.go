@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// InitDB инициализирует подключение к PostgreSQL из переменных окружения
 func InitDB() (*gorm.DB, error) {
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -19,6 +20,7 @@ func InitDB() (*gorm.DB, error) {
 	dbname := os.Getenv("DB_NAME")
 	sslmode := os.Getenv("DB_SSLMODE")
 
+	// Формируем строку подключения (DSN) из переменных окружения
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		host, user, password, dbname, port, sslmode)
 
@@ -56,6 +58,7 @@ func InitDB() (*gorm.DB, error) {
 	return db, nil
 }
 
+// getEnv возвращает значение переменной окружения или значение по умолчанию
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
