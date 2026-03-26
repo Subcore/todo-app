@@ -52,7 +52,11 @@ smoke-test: ## Verify the app is responding after deployment
 
 build-image: ## Build Docker image
 	@echo "[6/11] Building Docker image $(IMAGE_NAME):$(IMAGE_TAG)..."
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -t $(IMAGE_NAME):latest .
+	docker build \
+		--label "org.opencontainers.image.revision=$(GIT_SHA)" \
+		--label "org.opencontainers.image.version=$(GIT_SHA)" \
+		-t $(IMAGE_NAME):$(IMAGE_TAG) \
+		-t $(IMAGE_NAME):latest .
 
 # NOTE: The assignment suggests using `kind load docker-image` to load images into the cluster.
 # We use a local Docker registry (localhost:5000) instead — this approach is closer to a real
