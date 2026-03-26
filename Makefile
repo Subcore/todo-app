@@ -7,11 +7,34 @@ HELM_CHART   := ./deploy/helm/todo-app
 INGRESS_NGINX_VERSION := v1.12.1
 REGISTRY_NAME := kind-registry
 REGISTRY_PORT := 5000
+DB_USER       ?= postgres
+DB_PASS       ?= postgres
+DB_NAME       ?= todo_db
+DB_PORT       ?= 5433
 
-.PHONY: deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean install-tools
+.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean install-tools
 
-## Install all required tools (kind, kubectl, helm, golang-migrate)
-install-tools:
+.DEFAULT_GOAL := help
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+test: ## Run tests
+	go test ./...
+
+lint: ## Run linter
+	golangci-lint run
+
+run: ## Start app locally via docker-compose
+	docker-compose up
+
+install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "⚠  This target may require sudo to install binaries to /usr/local/bin."; \
+		printf "   Continue? [y/N] "; \
+		read ans; \
+		case "$$ans" in [yY]*) ;; *) echo "Aborted."; exit 1;; esac; \
+	fi
 	@echo "=== Installing required tools ==="
 	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
 	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
@@ -60,21 +83,18 @@ install-tools:
 	echo ""; \
 	echo "=== All tools ready ==="
 
-## Full local deployment pipeline
-deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts
+deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts ## Full local deployment pipeline
 	@echo ""
 	@echo "=== Deployment complete ==="
 	@echo "App:     http://todo.local"
 	@echo "Swagger: http://todo.local/docs"
 	@echo ""
 
-## Build Docker image
-build-image:
+build-image: ## Build Docker image
 	@echo "[6/11] Building Docker image $(IMAGE_NAME):$(IMAGE_TAG)..."
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -t $(IMAGE_NAME):latest .
 
-## Create local Docker registry if not running
-create-registry:
+create-registry: ## Create local Docker registry if not running
 	@echo "[1/11] Setting up local Docker registry..."
 	@if docker inspect $(REGISTRY_NAME) >/dev/null 2>&1; then \
 		echo "  Registry '$(REGISTRY_NAME)' already running, skipping."; \
@@ -83,8 +103,7 @@ create-registry:
 		docker run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):5000" --network bridge --name $(REGISTRY_NAME) registry:2; \
 	fi
 
-## Create kind cluster if it does not exist
-create-cluster:
+create-cluster: ## Create kind cluster if it does not exist
 	@echo "[2/11] Setting up kind cluster '$(CLUSTER_NAME)'..."
 	@if kind get clusters 2>/dev/null | grep -q "^$(CLUSTER_NAME)$$"; then \
 		echo "  Cluster '$(CLUSTER_NAME)' already exists, skipping creation."; \
@@ -93,8 +112,7 @@ create-cluster:
 		kind create cluster --name $(CLUSTER_NAME) --config kind-config.yaml; \
 	fi
 
-## Connect registry to kind network
-connect-registry:
+connect-registry: ## Connect registry to kind network
 	@echo "[3/11] Connecting registry to kind network..."
 	@if docker network inspect kind | grep -q '"$(REGISTRY_NAME)"'; then \
 		echo "  Registry already connected to kind network."; \
@@ -102,8 +120,7 @@ connect-registry:
 		docker network connect kind $(REGISTRY_NAME) || true; \
 	fi
 
-## Configure registry access on kind nodes (containerd 2.x hosts.toml)
-configure-registry:
+configure-registry: ## Configure registry access on kind nodes
 	@echo "[4/11] Configuring registry on kind nodes..."
 	@for node in $$(kind get nodes --name $(CLUSTER_NAME)); do \
 		echo "  Configuring node: $$node"; \
@@ -112,8 +129,7 @@ configure-registry:
 			| docker exec -i $$node cp /dev/stdin /etc/containerd/certs.d/localhost:$(REGISTRY_PORT)/hosts.toml; \
 	done
 
-## Install NGINX Ingress Controller for kind (pinned version)
-install-ingress:
+install-ingress: ## Install NGINX Ingress Controller for kind
 	@echo "[5/11] Installing ingress-nginx controller $(INGRESS_NGINX_VERSION)..."
 	@if kubectl get namespace ingress-nginx >/dev/null 2>&1; then \
 		echo "  ingress-nginx namespace exists, skipping installation."; \
@@ -132,13 +148,11 @@ install-ingress:
 		exit 1; \
 	}
 
-## Push image to local registry
-push-image:
+push-image: ## Push image to local registry
 	@echo "[7/11] Pushing image to local registry..."
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 
-## Build Helm chart dependencies
-helm-deps:
+helm-deps: ## Build Helm chart dependencies
 	@echo "[8/11] Building Helm chart dependencies..."
 	@if ! helm repo list 2>/dev/null | grep -q bitnami; then \
 		echo "  Adding Bitnami Helm repository..."; \
@@ -147,8 +161,7 @@ helm-deps:
 	fi
 	helm dependency build $(HELM_CHART)
 
-## Deploy via Helm (includes API + PostgreSQL + Ingress)
-helm-deploy:
+helm-deploy: ## Deploy via Helm (API + PostgreSQL + Ingress)
 	@echo "[9/11] Deploying via Helm (timeout: 120s)..."
 	@echo "  Tip: watch progress in another terminal: kubectl get pods -w"
 	@helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
@@ -164,51 +177,50 @@ helm-deploy:
 		exit 1; \
 	}
 
-## Run migrations via port-forward
-migrate:
+migrate: ## Run migrations via port-forward
 	@echo "[10/11] Running database migrations..."
 	@echo "  Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
 		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		--timeout=120s
 	@echo "  Starting port-forward and running migrations..."
-	kubectl port-forward svc/todo-postgresql 5433:5432 & \
+	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
-	sleep 4; \
+	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do sleep 1; done; \
 	migrate -path=./migrations \
-		-database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up; \
+		-database="postgres://$(DB_USER):$(DB_PASS)@localhost:$(DB_PORT)/$(DB_NAME)?sslmode=disable" up; \
 	kill $$PF_PID 2>/dev/null
 
-## Load seed data via port-forward
-seed:
-	@echo "Waiting for PostgreSQL pod to be ready..."
+seed: ## Load seed data via port-forward
+	@echo "[seed] Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
 		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		--timeout=120s
-	@echo "Loading seed data..."
-	kubectl port-forward svc/todo-postgresql 5433:5432 & \
+	@echo "[seed] Loading seed data..."
+	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
-	sleep 4; \
-	PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d todo_db -f seeds/seed.sql; \
+	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do sleep 1; done; \
+	PGPASSWORD=$(DB_PASS) psql -h localhost -p $(DB_PORT) -U $(DB_USER) -d $(DB_NAME) -f seeds/seed.sql; \
 	kill $$PF_PID 2>/dev/null
 
-## Ensure todo.local is in /etc/hosts
-ensure-hosts:
+ensure-hosts: ## Ensure todo.local is in /etc/hosts
 	@echo "[11/11] Checking /etc/hosts for todo.local..."
 	@if grep -q 'todo\.local' /etc/hosts; then \
 		echo "  todo.local already in /etc/hosts, skipping."; \
 	else \
 		echo "  Adding todo.local to /etc/hosts (requires sudo)..."; \
+		if [ "$$(id -u)" -ne 0 ]; then \
+			printf "  sudo is required to modify /etc/hosts. Continue? [y/N] "; \
+			read ans; \
+			case "$$ans" in [yY]*) ;; *) echo "  Skipped. Add manually: echo '127.0.0.1  todo.local' | sudo tee -a /etc/hosts"; exit 0;; esac; \
+		fi; \
 		echo '127.0.0.1  todo.local' | sudo tee -a /etc/hosts > /dev/null; \
 	fi
 
-## Delete kind cluster
-delete-cluster:
-	kind delete cluster --name $(CLUSTER_NAME)
+delete-cluster: ## Delete kind cluster
+	kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
 
-## Delete local registry
-delete-registry:
+delete-registry: ## Delete local registry
 	docker rm -f $(REGISTRY_NAME) 2>/dev/null || true
 
-## Full cleanup
-clean: delete-cluster delete-registry
+clean: delete-cluster delete-registry ## Full cleanup (cluster + registry)
