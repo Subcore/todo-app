@@ -151,6 +151,7 @@ install-ingress: ## Install NGINX Ingress Controller for kind
 push-image: ## Push image to local registry
 	@echo "[7/11] Pushing image to local registry..."
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+	docker push $(IMAGE_NAME):latest
 
 helm-deps: ## Build Helm chart dependencies
 	@echo "[8/11] Building Helm chart dependencies..."
@@ -186,7 +187,12 @@ migrate: ## Run migrations via port-forward
 	@echo "  Starting port-forward and running migrations..."
 	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
-	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do sleep 1; done; \
+	TRIES=0; \
+	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+		TRIES=$$((TRIES+1)); \
+		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
+		sleep 1; \
+	done; \
 	migrate -path=./migrations \
 		-database="postgres://$(DB_USER):$(DB_PASS)@localhost:$(DB_PORT)/$(DB_NAME)?sslmode=disable" up; \
 	kill $$PF_PID 2>/dev/null
@@ -199,7 +205,12 @@ seed: ## Load seed data via port-forward
 	@echo "[seed] Loading seed data..."
 	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
-	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do sleep 1; done; \
+	TRIES=0; \
+	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+		TRIES=$$((TRIES+1)); \
+		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
+		sleep 1; \
+	done; \
 	PGPASSWORD=$(DB_PASS) psql -h localhost -p $(DB_PORT) -U $(DB_USER) -d $(DB_NAME) -f seeds/seed.sql; \
 	kill $$PF_PID 2>/dev/null
 
