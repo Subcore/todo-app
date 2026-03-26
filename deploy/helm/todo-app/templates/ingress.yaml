@@ -18,13 +18,4 @@ spec:
                 name: {{ include "todo-app.fullname" . }}
                 port:
                   number: {{ .Values.service.port }}
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "todo-app.fullname" . }}
-                port:
-                  number: {{ .Values.service.port }}
 {{- end }}

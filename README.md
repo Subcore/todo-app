@@ -200,14 +200,16 @@ make deploy-kind
 
 This single command:
 
-1. Starts local Docker Registry on `localhost:5000`
+1. Creates local Docker registry on `localhost:5000`
 2. Creates Kind cluster
 3. Connects registry to Kind network
-4. Installs NGINX Ingress Controller
-5. Builds and pushes Docker image
-6. Deploys PostgreSQL (bitnami/postgresql) and the app via Helm
-7. Runs migrations
-8. Adds `todo.local` to `/etc/hosts`
+4. Configures registry on Kind nodes
+5. Installs NGINX Ingress Controller
+6. Builds and pushes Docker image
+7. Deploys PostgreSQL (bitnami/postgresql) and the app via Helm
+8. Runs migrations
+9. Adds `todo.local` to `/etc/hosts`
+10. Runs smoke test
 
 After that: http://todo.local
 
@@ -288,11 +290,14 @@ make deploy-kind
 ```
 
 Steps performed:
-1. Create Kind cluster (if not exists)
-2. Build & push image to local registry (`localhost:5000`)
-3. Run Helm deploy
-4. Run migrations
-5. Configure `/etc/hosts`
+1. Create local Docker registry (if not exists)
+2. Create Kind cluster (if not exists)
+3. Connect registry to Kind network
+4. Build & push image to local registry (`localhost:5000`)
+5. Run Helm deploy
+6. Run migrations
+7. Configure `/etc/hosts`
+8. Run smoke test
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Ingress / Service Exposure
