@@ -26,62 +26,7 @@ lint: ## Run linter
 	golangci-lint run
 
 run: ## Start app locally via docker-compose
-	docker-compose up
-
-install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
-	@if [ "$$(id -u)" -ne 0 ]; then \
-		echo "⚠  This target may require sudo to install binaries to /usr/local/bin."; \
-		printf "   Continue? [y/N] "; \
-		read ans; \
-		case "$$ans" in [yY]*) ;; *) echo "Aborted."; exit 1;; esac; \
-	fi
-	@echo "=== Installing required tools ==="
-	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
-	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
-	echo "Detected OS=$$OS ARCH=$$ARCH"; \
-	echo ""; \
-	echo "[1/4] kind..."; \
-	if command -v kind >/dev/null 2>&1; then \
-		echo "  Already installed: $$(kind version)"; \
-	else \
-		echo "  Installing kind..."; \
-		curl -Lo ./kind "https://kind.sigs.k8s.io/dl/latest/kind-$$OS-$$ARCH" && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind; \
-		echo "  Installed: $$(kind version)"; \
-	fi; \
-	echo ""; \
-	echo "[2/4] kubectl..."; \
-	if command -v kubectl >/dev/null 2>&1; then \
-		echo "  Already installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
-	else \
-		echo "  Installing kubectl..."; \
-		KUBECTL_VERSION=$$(curl -Ls https://dl.k8s.io/release/stable.txt); \
-		curl -LO "https://dl.k8s.io/release/$$KUBECTL_VERSION/bin/$$OS/$$ARCH/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/; \
-		echo "  Installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
-	fi; \
-	echo ""; \
-	echo "[3/4] helm..."; \
-	if command -v helm >/dev/null 2>&1; then \
-		echo "  Already installed: $$(helm version --short)"; \
-	else \
-		echo "  Installing helm..."; \
-		curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash; \
-		echo "  Installed: $$(helm version --short)"; \
-	fi; \
-	echo ""; \
-	echo "[4/4] golang-migrate..."; \
-	if command -v migrate >/dev/null 2>&1; then \
-		echo "  Already installed: $$(migrate -version 2>&1 || true)"; \
-	else \
-		echo "  Installing golang-migrate..."; \
-		if [ "$$OS" = "darwin" ]; then \
-			brew install golang-migrate; \
-		else \
-			curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.$$OS-$$ARCH.tar.gz" | tar xvz && sudo mv migrate /usr/local/bin/; \
-		fi; \
-		echo "  Installed: $$(migrate -version 2>&1 || true)"; \
-	fi; \
-	echo ""; \
-	echo "=== All tools ready ==="
+	docker compose up
 
 deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts ## Full local deployment pipeline
 	@echo ""
@@ -235,3 +180,58 @@ delete-registry: ## Delete local registry
 	docker rm -f $(REGISTRY_NAME) 2>/dev/null || true
 
 clean: delete-cluster delete-registry ## Full cleanup (cluster + registry)
+
+install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "⚠  This target may require sudo to install binaries to /usr/local/bin."; \
+		printf "   Continue? [y/N] "; \
+		read ans; \
+		case "$$ans" in [yY]*) ;; *) echo "Aborted."; exit 1;; esac; \
+	fi
+	@echo "=== Installing required tools ==="
+	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
+	echo "Detected OS=$$OS ARCH=$$ARCH"; \
+	echo ""; \
+	echo "[1/4] kind..."; \
+	if command -v kind >/dev/null 2>&1; then \
+		echo "  Already installed: $$(kind version)"; \
+	else \
+		echo "  Installing kind..."; \
+		curl -Lo ./kind "https://kind.sigs.k8s.io/dl/latest/kind-$$OS-$$ARCH" && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind; \
+		echo "  Installed: $$(kind version)"; \
+	fi; \
+	echo ""; \
+	echo "[2/4] kubectl..."; \
+	if command -v kubectl >/dev/null 2>&1; then \
+		echo "  Already installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
+	else \
+		echo "  Installing kubectl..."; \
+		KUBECTL_VERSION=$$(curl -Ls https://dl.k8s.io/release/stable.txt); \
+		curl -LO "https://dl.k8s.io/release/$$KUBECTL_VERSION/bin/$$OS/$$ARCH/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/; \
+		echo "  Installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
+	fi; \
+	echo ""; \
+	echo "[3/4] helm..."; \
+	if command -v helm >/dev/null 2>&1; then \
+		echo "  Already installed: $$(helm version --short)"; \
+	else \
+		echo "  Installing helm..."; \
+		curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash; \
+		echo "  Installed: $$(helm version --short)"; \
+	fi; \
+	echo ""; \
+	echo "[4/4] golang-migrate..."; \
+	if command -v migrate >/dev/null 2>&1; then \
+		echo "  Already installed: $$(migrate -version 2>&1 || true)"; \
+	else \
+		echo "  Installing golang-migrate..."; \
+		if [ "$$OS" = "darwin" ]; then \
+			brew install golang-migrate; \
+		else \
+			curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.$$OS-$$ARCH.tar.gz" | tar xvz && sudo mv migrate /usr/local/bin/; \
+		fi; \
+		echo "  Installed: $$(migrate -version 2>&1 || true)"; \
+	fi; \
+	echo ""; \
+	echo "=== All tools ready ==="
