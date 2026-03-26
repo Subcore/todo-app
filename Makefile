@@ -211,13 +211,28 @@ delete-registry: ## Delete local registry
 clean: delete-cluster delete-registry ## Full cleanup (cluster + registry + images)
 	@docker rmi $$(docker images $(IMAGE_NAME) -q) 2>/dev/null || true
 
-install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
+install-tools: ## Install all required tools (docker, kind, kubectl, helm, golang-migrate)
 	@echo "=== Installing required tools ==="
 	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
 	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
 	echo "Detected OS=$$OS ARCH=$$ARCH"; \
 	echo ""; \
-	echo "[1/4] kind..."; \
+	echo "[1/5] docker..."; \
+	if command -v docker >/dev/null 2>&1; then \
+		echo "  Already installed: $$(docker --version)"; \
+	elif [ "$$OS" = "darwin" ]; then \
+		echo "  [ERROR] Docker Desktop not found. Install it from https://www.docker.com/products/docker-desktop/"; \
+		exit 1; \
+	else \
+		echo "  Installing Docker Engine..."; \
+		curl -fsSL https://get.docker.com | sh; \
+		sudo usermod -aG docker $$USER; \
+		sudo systemctl enable --now docker; \
+		echo "  Installed: $$(docker --version)"; \
+		echo "  NOTE: Log out and back in (or run 'newgrp docker') for group membership to take effect."; \
+	fi; \
+	echo ""; \
+	echo "[2/5] kind..."; \
 	if command -v kind >/dev/null 2>&1; then \
 		echo "  Already installed: $$(kind version)"; \
 	else \
@@ -226,7 +241,7 @@ install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrat
 		echo "  Installed: $$(kind version)"; \
 	fi; \
 	echo ""; \
-	echo "[2/4] kubectl..."; \
+	echo "[3/5] kubectl..."; \
 	if command -v kubectl >/dev/null 2>&1; then \
 		echo "  Already installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
 	else \
@@ -236,7 +251,7 @@ install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrat
 		echo "  Installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
 	fi; \
 	echo ""; \
-	echo "[3/4] helm..."; \
+	echo "[4/5] helm..."; \
 	if command -v helm >/dev/null 2>&1; then \
 		echo "  Already installed: $$(helm version --short)"; \
 	else \
@@ -245,7 +260,7 @@ install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrat
 		echo "  Installed: $$(helm version --short)"; \
 	fi; \
 	echo ""; \
-	echo "[4/4] golang-migrate..."; \
+	echo "[5/5] golang-migrate..."; \
 	if command -v migrate >/dev/null 2>&1; then \
 		echo "  Already installed: $$(migrate -version 2>&1 || true)"; \
 	else \
@@ -253,7 +268,7 @@ install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrat
 		if [ "$$OS" = "darwin" ]; then \
 			brew install golang-migrate; \
 		else \
-			curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.$$OS-$$ARCH.tar.gz" | tar xvz && sudo mv migrate /usr/local/bin/; \
+			curl -L "https://github.com/golang-migrate/migrate/releases/latest/download/migrate.$$OS-$$ARCH.tar.gz" | tar xvz -C /tmp && sudo mv /tmp/migrate /usr/local/bin/; \
 		fi; \
 		echo "  Installed: $$(migrate -version 2>&1 || true)"; \
 	fi; \

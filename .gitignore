@@ -17,6 +17,9 @@ api
 # Build
 dist/
 
+# Helm
+deploy/helm/todo-app/charts/*.tgz
+
 README copy.md
 .claude
 .agents/workflows
