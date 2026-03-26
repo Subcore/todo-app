@@ -92,7 +92,7 @@ macOS: https://docs.docker.com/desktop/mac/install/
 For Kubernetes — install Docker first, then:
 
 ```bash
-sudo apt install make   # if not installed
+sudo apt install make   # if MAKE is not installed
 make install-tools      # installs kind, kubectl, helm, golang-migrate
 ```
 
@@ -117,11 +117,8 @@ The API won't start until migrations finish. Check status: `docker compose ps`
 **Kubernetes:**
 
 ```bash
-kubectl port-forward svc/todo-postgresql 5433:5432 &
-migrate -path=./migrations -database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up
+make migrate
 ```
-
-Or: `make migrate`
 
 ### How to seed data
 
