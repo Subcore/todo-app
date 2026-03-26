@@ -12,7 +12,7 @@ DB_PASS       ?= postgres
 DB_NAME       ?= todo_db
 DB_PORT       ?= 5433
 
-.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate seed helm-deploy ensure-hosts delete-cluster delete-registry clean install-tools
+.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate migrate-down seed helm-deploy ensure-hosts smoke-test delete-cluster delete-registry clean install-tools
 
 .DEFAULT_GOAL := help
 
@@ -24,16 +24,31 @@ test: ## Run tests
 
 lint: ## Run linter
 	golangci-lint run
+	helm lint $(HELM_CHART)
 
 run: ## Start app locally via docker-compose
 	docker compose up
 
-deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts ## Full local deployment pipeline
+deploy-kind: install-tools create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts smoke-test ## Full local deployment pipeline
 	@echo ""
 	@echo "=== Deployment complete ==="
 	@echo "App:     http://todo.local"
 	@echo "Swagger: http://todo.local/docs"
 	@echo ""
+
+smoke-test: ## Verify the app is responding after deployment
+	@echo "[smoke] Checking http://todo.local/healthz..."
+	@TRIES=0; \
+	until curl -sf http://todo.local/healthz >/dev/null 2>&1; do \
+		TRIES=$$((TRIES+1)); \
+		if [ $$TRIES -ge 15 ]; then \
+			echo "  [ERROR] App not responding after 15s"; \
+			curl -sv http://todo.local/healthz 2>&1 | sed 's/^/  /'; \
+			exit 1; \
+		fi; \
+		sleep 1; \
+	done
+	@echo "  App is healthy."
 
 build-image: ## Build Docker image
 	@echo "[6/11] Building Docker image $(IMAGE_NAME):$(IMAGE_TAG)..."
@@ -142,6 +157,25 @@ migrate: ## Run migrations via port-forward
 		-database="postgres://$(DB_USER):$(DB_PASS)@localhost:$(DB_PORT)/$(DB_NAME)?sslmode=disable" up; \
 	kill $$PF_PID 2>/dev/null
 
+migrate-down: ## Rollback last migration
+	@echo "[migrate-down] Rolling back last migration..."
+	@echo "  Waiting for PostgreSQL pod to be ready..."
+	kubectl wait --for=condition=ready pod \
+		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
+		--timeout=120s
+	@echo "  Starting port-forward and rolling back..."
+	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
+	PF_PID=$$!; \
+	TRIES=0; \
+	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+		TRIES=$$((TRIES+1)); \
+		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
+		sleep 1; \
+	done; \
+	migrate -path=./migrations \
+		-database="postgres://$(DB_USER):$(DB_PASS)@localhost:$(DB_PORT)/$(DB_NAME)?sslmode=disable" down 1; \
+	kill $$PF_PID 2>/dev/null
+
 seed: ## Load seed data via port-forward
 	@echo "[seed] Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
@@ -164,12 +198,7 @@ ensure-hosts: ## Ensure todo.local is in /etc/hosts
 	@if grep -q 'todo\.local' /etc/hosts; then \
 		echo "  todo.local already in /etc/hosts, skipping."; \
 	else \
-		echo "  Adding todo.local to /etc/hosts (requires sudo)..."; \
-		if [ "$$(id -u)" -ne 0 ]; then \
-			printf "  sudo is required to modify /etc/hosts. Continue? [y/N] "; \
-			read ans; \
-			case "$$ans" in [yY]*) ;; *) echo "  Skipped. Add manually: echo '127.0.0.1  todo.local' | sudo tee -a /etc/hosts"; exit 0;; esac; \
-		fi; \
+		echo "  Adding todo.local to /etc/hosts..."; \
 		echo '127.0.0.1  todo.local' | sudo tee -a /etc/hosts > /dev/null; \
 	fi
 
@@ -179,15 +208,10 @@ delete-cluster: ## Delete kind cluster
 delete-registry: ## Delete local registry
 	docker rm -f $(REGISTRY_NAME) 2>/dev/null || true
 
-clean: delete-cluster delete-registry ## Full cleanup (cluster + registry)
+clean: delete-cluster delete-registry ## Full cleanup (cluster + registry + images)
+	@docker rmi $$(docker images $(IMAGE_NAME) -q) 2>/dev/null || true
 
 install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
-	@if [ "$$(id -u)" -ne 0 ]; then \
-		echo "⚠  This target may require sudo to install binaries to /usr/local/bin."; \
-		printf "   Continue? [y/N] "; \
-		read ans; \
-		case "$$ans" in [yY]*) ;; *) echo "Aborted."; exit 1;; esac; \
-	fi
 	@echo "=== Installing required tools ==="
 	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
 	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
