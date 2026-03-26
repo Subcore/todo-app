@@ -12,7 +12,7 @@ DB_PASS       ?= postgres
 DB_NAME       ?= todo_db
 DB_PORT       ?= 5433
 
-.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate migrate-down seed helm-deploy ensure-hosts smoke-test delete-cluster delete-registry clean install-tools
+.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate migrate-down seed helm-deploy ensure-hosts smoke-test delete-cluster delete-registry clean install-docker install-tools
 
 .DEFAULT_GOAL := help
 
@@ -29,7 +29,7 @@ lint: ## Run linter
 run: ## Start app locally via docker-compose
 	docker compose up
 
-deploy-kind: install-tools create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts smoke-test ## Full local deployment pipeline
+deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts smoke-test ## Full local deployment pipeline (run 'make install-tools' first, then re-login)
 	@echo ""
 	@echo "=== Deployment complete ==="
 	@echo "App:     http://todo.local"
@@ -54,6 +54,10 @@ build-image: ## Build Docker image
 	@echo "[6/11] Building Docker image $(IMAGE_NAME):$(IMAGE_TAG)..."
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) -t $(IMAGE_NAME):latest .
 
+# NOTE: The assignment suggests using `kind load docker-image` to load images into the cluster.
+# We use a local Docker registry (localhost:5000) instead — this approach is closer to a real
+# CI/CD pipeline (build once, push to registry, pull anywhere) and avoids re-loading images
+# on every deploy. The registry is connected to the kind network so nodes can pull from it directly.
 create-registry: ## Create local Docker registry if not running
 	@echo "[1/11] Setting up local Docker registry..."
 	@if docker inspect $(REGISTRY_NAME) >/dev/null 2>&1; then \
@@ -147,8 +151,9 @@ migrate: ## Run migrations via port-forward
 	@echo "  Starting port-forward and running migrations..."
 	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
+	sleep 2; \
 	TRIES=0; \
-	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+	until nc -z localhost $(DB_PORT) 2>/dev/null; do \
 		TRIES=$$((TRIES+1)); \
 		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
 		sleep 1; \
@@ -166,8 +171,9 @@ migrate-down: ## Rollback last migration
 	@echo "  Starting port-forward and rolling back..."
 	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
+	sleep 2; \
 	TRIES=0; \
-	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+	until nc -z localhost $(DB_PORT) 2>/dev/null; do \
 		TRIES=$$((TRIES+1)); \
 		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
 		sleep 1; \
@@ -184,8 +190,9 @@ seed: ## Load seed data via port-forward
 	@echo "[seed] Loading seed data..."
 	kubectl port-forward svc/todo-postgresql $(DB_PORT):5432 & \
 	PF_PID=$$!; \
+	sleep 2; \
 	TRIES=0; \
-	until pg_isready -h localhost -p $(DB_PORT) -q 2>/dev/null; do \
+	until nc -z localhost $(DB_PORT) 2>/dev/null; do \
 		TRIES=$$((TRIES+1)); \
 		if [ $$TRIES -ge 30 ]; then echo "  [ERROR] PostgreSQL not ready after 30s"; kill $$PF_PID 2>/dev/null; exit 1; fi; \
 		sleep 1; \
@@ -211,13 +218,8 @@ delete-registry: ## Delete local registry
 clean: delete-cluster delete-registry ## Full cleanup (cluster + registry + images)
 	@docker rmi $$(docker images $(IMAGE_NAME) -q) 2>/dev/null || true
 
-install-tools: ## Install all required tools (docker, kind, kubectl, helm, golang-migrate)
-	@echo "=== Installing required tools ==="
+install-docker: ## Install Docker Engine (Linux only) and add current user to docker group
 	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
-	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
-	echo "Detected OS=$$OS ARCH=$$ARCH"; \
-	echo ""; \
-	echo "[1/5] docker..."; \
 	if command -v docker >/dev/null 2>&1; then \
 		echo "  Already installed: $$(docker --version)"; \
 	elif [ "$$OS" = "darwin" ]; then \
@@ -229,10 +231,18 @@ install-tools: ## Install all required tools (docker, kind, kubectl, helm, golan
 		sudo usermod -aG docker $$USER; \
 		sudo systemctl enable --now docker; \
 		echo "  Installed: $$(docker --version)"; \
-		echo "  NOTE: Log out and back in (or run 'newgrp docker') for group membership to take effect."; \
-	fi; \
+		echo ""; \
+		echo "  NOTE: Run 'newgrp docker' or log out and back in,"; \
+		echo "  then run 'make install-tools && make deploy-kind'."; \
+	fi
+
+install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrate)
+	@echo "=== Installing required tools ==="
+	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+	ARCH=$$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/;s/arm64/arm64/'); \
+	echo "Detected OS=$$OS ARCH=$$ARCH"; \
 	echo ""; \
-	echo "[2/5] kind..."; \
+	echo "[1/4] kind..."; \
 	if command -v kind >/dev/null 2>&1; then \
 		echo "  Already installed: $$(kind version)"; \
 	else \
@@ -241,7 +251,7 @@ install-tools: ## Install all required tools (docker, kind, kubectl, helm, golan
 		echo "  Installed: $$(kind version)"; \
 	fi; \
 	echo ""; \
-	echo "[3/5] kubectl..."; \
+	echo "[2/4] kubectl..."; \
 	if command -v kubectl >/dev/null 2>&1; then \
 		echo "  Already installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
 	else \
@@ -251,7 +261,7 @@ install-tools: ## Install all required tools (docker, kind, kubectl, helm, golan
 		echo "  Installed: $$(kubectl version --client --short 2>/dev/null || kubectl version --client)"; \
 	fi; \
 	echo ""; \
-	echo "[4/5] helm..."; \
+	echo "[3/4] helm..."; \
 	if command -v helm >/dev/null 2>&1; then \
 		echo "  Already installed: $$(helm version --short)"; \
 	else \
@@ -260,7 +270,7 @@ install-tools: ## Install all required tools (docker, kind, kubectl, helm, golan
 		echo "  Installed: $$(helm version --short)"; \
 	fi; \
 	echo ""; \
-	echo "[5/5] golang-migrate..."; \
+	echo "[4/4] golang-migrate..."; \
 	if command -v migrate >/dev/null 2>&1; then \
 		echo "  Already installed: $$(migrate -version 2>&1 || true)"; \
 	else \

@@ -33,7 +33,7 @@ resources:
 
 postgresql:
   auth:
-    username: ""
+    username: "postgres"
     password: postgres
     postgresPassword: postgres
     database: todo_db
