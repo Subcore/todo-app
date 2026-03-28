@@ -301,7 +301,7 @@
                         x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                         @click.outside="if (!searchQuery && !dueDateAfter && !dueDateBefore) showSearch = false"
                         class="absolute right-0 top-full mt-2 z-10">
-                        <div class="flex flex-col gap-2 bg-slate-800 border border-white/10 rounded-xl p-3 shadow-xl w-[260px]">
+                        <div class="flex flex-col gap-2 bg-slate-800 border border-white/10 rounded-xl p-3 shadow-xl w-[300px]">
                             <div class="relative">
                                 <i data-lucide="search"
                                     class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
@@ -311,7 +311,6 @@
                                     class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-300 outline-none focus:border-primary/50 placeholder-slate-500">
                             </div>
                             <div class="flex gap-2 items-center">
-                                <span class="text-slate-500 text-xs whitespace-nowrap">Срок:</span>
                                 <div class="relative flex-1">
                                     <i data-lucide="calendar"
                                         class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500"></i>
