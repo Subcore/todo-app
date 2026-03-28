@@ -21,19 +21,80 @@
 <body class="bg-gradient-main min-h-screen text-slate-50 flex justify-center p-8 font-sans">
     <div id="app" 
         x-data="{ 
-            todos: [], 
+            todos: [],
             deletedTodos: [],
-            newTodo: '', 
-            newDueDate: new Date().toLocaleDateString('en-CA'),
+            newTodo: '',
+            newDueDate: '',
+            newDueDateLabel: '',
             newTags: '',
+            showAddForm: false,
+            showDatePicker: false,
+            editingTodoId: null,
+            editTitle: '',
+            editDueDate: '',
+            editTags: '',
+            searchQuery: '',
+            searchDebounceTimer: null,
+            showSearch: false,
+            dueDateAfter: '',
+            dueDateBefore: '',
             getTodayDate() {
                 return new Date().toLocaleDateString('en-CA');
+            },
+            getTomorrowDate() {
+                const d = new Date();
+                d.setDate(d.getDate() + 1);
+                return d.toLocaleDateString('en-CA');
+            },
+            setQuickDate(type) {
+                if (type === 'today') {
+                    this.newDueDate = this.getTodayDate();
+                    this.newDueDateLabel = 'Сегодня';
+                } else if (type === 'tomorrow') {
+                    this.newDueDate = this.getTomorrowDate();
+                    this.newDueDateLabel = 'Завтра';
+                }
+                this.showDatePicker = false;
+            },
+            setCustomDate(event) {
+                this.newDueDate = event.target.value;
+                if (this.newDueDate) {
+                    const d = new Date(this.newDueDate + 'T00:00:00');
+                    this.newDueDateLabel = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+                } else {
+                    this.newDueDateLabel = '';
+                }
+                this.showDatePicker = false;
+            },
+            clearNewDate() {
+                this.newDueDate = '';
+                this.newDueDateLabel = '';
+            },
+            openAddForm() {
+                this.showAddForm = true;
+                this.$nextTick(() => {
+                    this.$refs.newTodoInput?.focus();
+                    lucide.createIcons();
+                });
+            },
+            closeAddForm() {
+                this.showAddForm = false;
+                this.newTodo = '';
+                this.newDueDate = '';
+                this.newDueDateLabel = '';
+                this.newTags = '';
+                this.showDatePicker = false;
             },
             filter: 'Все',
             showTrash: false,
             async fetchTodos() {
                 try {
-                    const response = await fetch('/api/v1/todos');
+                    const params = new URLSearchParams();
+                    if (this.searchQuery?.trim()) params.set('search', this.searchQuery.trim());
+                    if (this.dueDateAfter) params.set('due_after', this.dueDateAfter + 'T00:00:00Z');
+                    if (this.dueDateBefore) params.set('due_before', this.dueDateBefore + 'T23:59:59Z');
+                    const qs = params.toString();
+                    const response = await fetch('/api/v1/todos' + (qs ? '?' + qs : ''));
                     if (response.ok) {
                         this.todos = await response.json();
                     }
@@ -86,8 +147,11 @@
                     });
                     if (response.ok) {
                         this.newTodo = '';
-                        this.newDueDate = this.getTodayDate();
+                        this.newDueDate = '';
+                        this.newDueDateLabel = '';
                         this.newTags = '';
+                        this.showDatePicker = false;
+                        this.showAddForm = false;
                         await this.fetchTodos();
                     }
                 } catch (err) {
@@ -147,6 +211,44 @@
                     console.error('Ошибка при очистке выполненных задач:', err);
                 }
             },
+            onSearchInput() {
+                clearTimeout(this.searchDebounceTimer);
+                this.searchDebounceTimer = setTimeout(() => this.fetchTodos(), 300);
+            },
+            startEditing(todo) {
+                this.editingTodoId = todo.id;
+                this.editTitle = todo.title;
+                this.editDueDate = todo.due_date ? todo.due_date.substring(0, 10) : '';
+                this.editTags = (todo.tags || []).join(', ');
+            },
+            cancelEditing() {
+                this.editingTodoId = null;
+                this.editTitle = '';
+                this.editDueDate = '';
+                this.editTags = '';
+            },
+            async saveEditing(todo) {
+                if (!this.editTitle.trim()) return;
+                try {
+                    const tags = this.editTags.split(',').map(t => t.trim()).filter(t => t !== '');
+                    const response = await fetch(`/api/v1/todos/${todo.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: this.editTitle.trim(),
+                            completed: todo.completed,
+                            due_date: this.editDueDate ? this.editDueDate + 'T00:00:00Z' : null,
+                            tags: tags.length > 0 ? tags : null
+                        })
+                    });
+                    if (response.ok) {
+                        this.cancelEditing();
+                        await this.fetchTodos();
+                    }
+                } catch (err) {
+                    console.error('Ошибка при сохранении задачи:', err);
+                }
+            },
             formatDate(dateStr) {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
@@ -162,6 +264,15 @@
                 this.$watch('showTrash', () => {
                     this.$nextTick(() => lucide.createIcons());
                 });
+                this.$watch('editingTodoId', () => {
+                    this.$nextTick(() => lucide.createIcons());
+                });
+                this.$watch('showAddForm', () => {
+                    this.$nextTick(() => lucide.createIcons());
+                });
+                this.$watch('showSearch', () => {
+                    this.$nextTick(() => lucide.createIcons());
+                });
                 lucide.createIcons();
             }
          }" 
@@ -174,63 +285,183 @@
                 <p class="text-slate-400 text-[0.95rem]" x-text="`${currentDate} — ${todos.length} задач`"></p>
             </header>
 
-            <div class="flex flex-col gap-3 mb-8">
-                <div class="flex gap-3">
-                    <input 
-                        type="text" 
-                        x-model="newTodo" 
-                        @keyup.enter="addTodo"
-                        placeholder="Что нужно сделать?"
-                        class="flex-grow bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white text-base transition-all outline-none focus:border-primary focus:bg-white/10 focus:ring-4 focus:ring-primary/15 placeholder-slate-500"
-                    >
-                    <button 
-                        @click="addTodo"
-                        class="bg-primary hover:bg-primary-light active:scale-95 px-6 rounded-2xl text-white font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                    >
-                        <i data-lucide="plus" class="w-5 h-5"></i>
-                        <span class="hidden sm:inline">Добавить</span>
-                    </button>
+            <!-- Add task button (collapsed) -->
+            <button
+                x-show="!showAddForm"
+                @click="openAddForm()"
+                class="flex items-center gap-3 w-full px-5 py-3.5 mb-6 rounded-2xl text-primary hover:bg-white/5 transition-all cursor-pointer group"
+            >
+                <div class="w-6 h-6 rounded-lg border-2 border-primary/40 flex items-center justify-center group-hover:border-primary transition-all">
+                    <i data-lucide="plus" class="w-3.5 h-3.5 text-primary"></i>
                 </div>
-                <div class="flex gap-3">
-                    <div class="relative flex-grow sm:flex-grow-0 sm:w-1/2">
-                        <i data-lucide="calendar" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
-                        <input 
-                            type="date" 
-                            x-model="newDueDate"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2 text-sm text-slate-300 transition-all outline-none focus:border-primary/50 focus:bg-white/10"
+                <span class="text-base font-medium">Добавить задачу</span>
+            </button>
+
+            <!-- Add task form (expanded, Google Tasks style) -->
+            <div
+                x-show="showAddForm"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 -translate-y-2"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                class="mb-6 bg-white/5 border border-primary/30 rounded-2xl p-4 flex flex-col gap-3"
+                @keyup.escape="closeAddForm()"
+                @click.outside="if (!newTodo.trim()) closeAddForm()"
+            >
+                <!-- Title input -->
+                <input
+                    type="text"
+                    x-ref="newTodoInput"
+                    x-model="newTodo"
+                    @keyup.enter="addTodo"
+                    placeholder="Новая задача"
+                    class="w-full bg-transparent text-white text-base outline-none placeholder-slate-500 px-1 py-1"
+                >
+
+                <!-- Tags input -->
+                <div class="relative">
+                    <i data-lucide="tag" class="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                    <input
+                        type="text"
+                        x-model="newTags"
+                        @keyup.enter="addTodo"
+                        placeholder="Теги (через запятую)"
+                        class="w-full bg-transparent text-sm text-slate-300 outline-none placeholder-slate-600 pl-8 py-1"
+                    >
+                </div>
+
+                <!-- Bottom row: date quick-picks + calendar + save -->
+                <div class="flex items-center justify-between pt-1">
+                    <div class="flex items-center gap-1.5">
+                        <!-- Quick date: Today -->
+                        <button
+                            @click="setQuickDate('today')"
+                            class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all"
+                            :class="newDueDateLabel === 'Сегодня' ? 'bg-primary/15 border-primary/30 text-primary font-medium' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'"
                         >
-                    </div>
-                    <div class="relative flex-grow sm:w-1/2">
-                        <i data-lucide="tag" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
-                        <input 
-                            type="text" 
-                            x-model="newTags"
-                            placeholder="Теги (через запятую)"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-2 text-sm text-slate-300 transition-all outline-none focus:border-primary/50 focus:bg-white/10 placeholder-slate-600"
+                            <i data-lucide="sun" class="w-3 h-3"></i>
+                            Сегодня
+                        </button>
+
+                        <!-- Quick date: Tomorrow -->
+                        <button
+                            @click="setQuickDate('tomorrow')"
+                            class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all"
+                            :class="newDueDateLabel === 'Завтра' ? 'bg-primary/15 border-primary/30 text-primary font-medium' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'"
                         >
+                            <i data-lucide="sunrise" class="w-3 h-3"></i>
+                            Завтра
+                        </button>
+
+                        <!-- Calendar icon for custom date -->
+                        <div class="relative">
+                            <label
+                                class="inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all cursor-pointer"
+                                :class="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'bg-primary/15 border-primary/30 text-primary' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'"
+                                :title="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? newDueDateLabel : 'Выбрать дату'"
+                            >
+                                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                <input
+                                    type="date"
+                                    @change="setCustomDate($event)"
+                                    class="absolute opacity-0 w-0 h-0"
+                                >
+                            </label>
+                        </div>
+
+                        <!-- Clear date -->
+                        <button
+                            x-show="newDueDateLabel"
+                            @click="clearNewDate()"
+                            class="text-slate-500 hover:text-white p-1 rounded-full transition-all"
+                            title="Сбросить дату"
+                        >
+                            <i data-lucide="x" class="w-3 h-3"></i>
+                        </button>
                     </div>
+
+                    <!-- Save button -->
+                    <button
+                        @click="addTodo"
+                        :disabled="!newTodo.trim()"
+                        class="bg-primary hover:bg-primary-light disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 px-4 py-1.5 rounded-xl text-white text-sm font-medium transition-all"
+                    >
+                        Сохранить
+                    </button>
                 </div>
             </div>
 
-            <div class="flex gap-2 mb-6">
+            <div class="flex gap-2 mb-6 items-center">
                 <template x-for="f in ['Все', 'Активные', 'Завершенные']">
-                    <button 
+                    <button
                         @click="filter = f"
                         :class="filter === f ? 'bg-white/5 border-primary-light text-white' : 'border-white/10 text-slate-400'"
                         class="px-4 py-2 border rounded-xl text-[0.85rem] cursor-pointer transition-all hover:bg-white/5"
                         x-text="f"
                     ></button>
                 </template>
+                <div class="ml-auto relative">
+                    <button
+                        @click="showSearch = !showSearch; if (showSearch) $nextTick(() => $refs.searchInput.focus())"
+                        class="p-2 rounded-xl border transition-all"
+                        :class="showSearch || searchQuery ? 'border-primary/40 text-primary bg-primary/10' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'"
+                    >
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </button>
+                    <div
+                        x-show="showSearch"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        @click.outside="if (!searchQuery) showSearch = false"
+                        class="absolute right-0 top-full mt-2 z-10"
+                    >
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                            <input
+                                type="text"
+                                x-ref="searchInput"
+                                x-model="searchQuery"
+                                @input="onSearchInput()"
+                                @keyup.escape="searchQuery = ''; showSearch = false; fetchTodos()"
+                                placeholder="Поиск..."
+                                class="w-[220px] bg-slate-800 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-300 outline-none focus:border-primary/50 shadow-xl placeholder-slate-500"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-6 items-center">
+                <span class="text-slate-500 text-xs whitespace-nowrap">Срок:</span>
+                <div class="relative flex-1">
+                    <i data-lucide="calendar" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                    <input type="date" x-model="dueDateAfter" @change="fetchTodos()"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
+                        title="После">
+                </div>
+                <span class="text-slate-600 text-xs">—</span>
+                <div class="relative flex-1">
+                    <i data-lucide="calendar" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                    <input type="date" x-model="dueDateBefore" @change="fetchTodos()"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
+                        title="До">
+                </div>
+                <button x-show="dueDateAfter || dueDateBefore"
+                    @click="dueDateAfter = ''; dueDateBefore = ''; fetchTodos()"
+                    class="text-slate-500 hover:text-white p-1 rounded-lg transition-all" title="Сбросить">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
             </div>
 
             <ul class="flex flex-col gap-3 list-none">
                 <template x-for="todo in filteredTodos" :key="todo.id">
-                    <li 
+                    <li
                         class="todo-item-enter flex flex-col bg-white/5 border border-white/10 p-4 rounded-2xl transition-all hover:bg-white/[0.08] hover:scale-[1.01] hover:border-white/20 group"
                         :class="todo.completed && 'opacity-80'"
                     >
-                        <div class="flex items-center">
-                            <div 
+                        <!-- Display mode -->
+                        <div class="flex items-center" x-show="editingTodoId !== todo.id">
+                            <div
                                 @click="toggleTodo(todo)"
                                 class="w-6 h-6 rounded-lg border-2 border-white/10 mr-4 cursor-pointer flex items-center justify-center transition-all flex-shrink-0"
                                 :class="todo.completed ? 'bg-success border-success' : 'group-hover:border-primary/50'"
@@ -239,14 +470,15 @@
                                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                 </template>
                             </div>
-                            
+
                             <div class="flex-grow flex flex-col min-w-0">
-                                <span 
-                                    class="text-base transition-all truncate"
+                                <span
+                                    @dblclick="startEditing(todo)"
+                                    class="text-base transition-all truncate cursor-pointer"
                                     :class="todo.completed ? 'text-slate-400 line-through' : 'text-slate-100'"
                                     x-text="todo.title"
                                 ></span>
-                                
+
                                 <div class="flex flex-wrap gap-2 mt-2 items-center">
                                     <template x-if="todo.due_date">
                                         <div class="flex items-center gap-1.5 text-[0.7rem] text-slate-400 bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
@@ -254,19 +486,73 @@
                                             <span x-text="formatDate(todo.due_date)"></span>
                                         </div>
                                     </template>
-                                    
+
                                     <template x-for="tag in (todo.tags || [])">
                                         <span class="text-[0.65rem] text-primary-light bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20" x-text="tag"></span>
                                     </template>
                                 </div>
                             </div>
-                            
-                            <button 
+
+                            <button
+                                @click="startEditing(todo)"
+                                class="text-slate-400 hover:text-primary hover:bg-primary/10 p-2 rounded-xl transition-all ml-1"
+                                title="Редактировать"
+                            >
+                                <i data-lucide="pencil" class="w-[16px] h-[16px]"></i>
+                            </button>
+                            <button
                                 @click="removeTodo(todo.id)"
-                                class="text-slate-400 hover:text-accent hover:bg-accent/10 p-2 rounded-xl transition-all ml-2"
+                                class="text-slate-400 hover:text-accent hover:bg-accent/10 p-2 rounded-xl transition-all"
                             >
                                 <i data-lucide="trash-2" class="w-[18px] h-[18px]"></i>
                             </button>
+                        </div>
+
+                        <!-- Edit mode -->
+                        <div class="flex flex-col gap-3" x-show="editingTodoId === todo.id" @keyup.escape="cancelEditing()">
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    x-model="editTitle"
+                                    @keyup.enter="saveEditing(todo)"
+                                    class="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-base text-slate-100 outline-none focus:border-primary/50 focus:bg-white/10"
+                                    placeholder="Название задачи"
+                                >
+                                <button
+                                    @click="saveEditing(todo)"
+                                    class="text-success hover:bg-success/10 p-2 rounded-xl transition-all"
+                                    title="Сохранить"
+                                >
+                                    <i data-lucide="check" class="w-[18px] h-[18px]"></i>
+                                </button>
+                                <button
+                                    @click="cancelEditing()"
+                                    class="text-slate-400 hover:text-accent hover:bg-accent/10 p-2 rounded-xl transition-all"
+                                    title="Отменить"
+                                >
+                                    <i data-lucide="x" class="w-[18px] h-[18px]"></i>
+                                </button>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="relative flex-1">
+                                    <i data-lucide="calendar" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                                    <input
+                                        type="date"
+                                        x-model="editDueDate"
+                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
+                                    >
+                                </div>
+                                <div class="relative flex-1">
+                                    <i data-lucide="tag" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                                    <input
+                                        type="text"
+                                        x-model="editTags"
+                                        @keyup.enter="saveEditing(todo)"
+                                        placeholder="Теги (через запятую)"
+                                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10 placeholder-slate-600"
+                                    >
+                                </div>
+                            </div>
                         </div>
                     </li>
                 </template>
