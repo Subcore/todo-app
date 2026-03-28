@@ -68,7 +68,7 @@ func (r *todoRepository) GetAll(ctx context.Context, filter model.TodoFilter) ([
 		query = query.Where("due_date > ?", filter.DueAfter)
 	}
 
-	if err := query.Find(&todos).Error; err != nil {
+	if err := query.Order("created_at DESC").Find(&todos).Error; err != nil {
 		return nil, err
 	}
 	return todos, nil
