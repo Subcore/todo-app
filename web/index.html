@@ -385,14 +385,20 @@
                         </button>
 
                         <!-- Calendar icon for custom date -->
-                        <div class="relative">
-                            <label
-                                class="inline-flex items-center justify-center w-8 h-8 rounded-full border transition-all cursor-pointer"
-                                :class="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'bg-primary/15 border-primary/30 text-primary' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'"
+                        <div class="relative inline-flex items-center">
+                            <div
+                                class="inline-flex items-center gap-1.5 rounded-full border transition-all pointer-events-none"
+                                :class="[
+                                    newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'bg-primary/15 border-primary/30 text-primary font-medium' : 'border-white/10 text-slate-400',
+                                    newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'px-3 py-1.5' : 'w-8 h-8 justify-center'
+                                ]"
                                 :title="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? newDueDateLabel : 'Выбрать дату'">
                                 <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                                <input type="date" @change="setCustomDate($event)" class="absolute opacity-0 w-0 h-0">
-                            </label>
+                                <span x-show="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра'"
+                                    x-text="newDueDateLabel" class="text-xs"></span>
+                            </div>
+                            <input type="date" @change="setCustomDate($event)" :value="newDueDate || getTodayDate()"
+                                class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
                         </div>
 
                         <!-- Clear date -->
