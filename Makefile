@@ -79,6 +79,8 @@ create-cluster: ## Create kind cluster if it does not exist
 		echo "  Creating kind cluster '$(CLUSTER_NAME)'..."; \
 		kind create cluster --name $(CLUSTER_NAME) --config kind-config.yaml; \
 	fi
+	@echo "  Ensuring worker node roles..."
+	@kubectl label node $(CLUSTER_NAME)-worker node-role.kubernetes.io/worker= --overwrite 2>/dev/null || true
 
 connect-registry: ## Connect registry to kind network
 	@echo "[3/11] Connecting registry to kind network..."
