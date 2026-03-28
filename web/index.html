@@ -283,9 +283,63 @@
                 <p class="text-slate-400 text-[0.95rem]" x-text="`${currentDate} — ${todos.length} задач`"></p>
             </header>
 
+            <div class="flex gap-2 mb-6 items-center">
+                <template x-for="f in ['Все', 'Активные', 'Завершенные']">
+                    <button @click="filter = f"
+                        :class="filter === f ? 'bg-white/5 border-primary-light text-white' : 'border-white/10 text-slate-400'"
+                        class="px-4 py-2 border rounded-xl text-[0.85rem] cursor-pointer transition-all hover:bg-white/5"
+                        x-text="f"></button>
+                </template>
+                <div class="ml-auto relative">
+                    <button
+                        @click="showSearch = !showSearch; if (showSearch) $nextTick(() => $refs.searchInput.focus())"
+                        class="p-2 rounded-xl border transition-all"
+                        :class="showSearch || searchQuery ? 'border-primary/40 text-primary bg-primary/10' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </button>
+                    <div x-show="showSearch" x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                        @click.outside="if (!searchQuery) showSearch = false"
+                        class="absolute right-0 top-full mt-2 z-10">
+                        <div class="relative">
+                            <i data-lucide="search"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                            <input type="text" x-ref="searchInput" x-model="searchQuery" @input="onSearchInput()"
+                                @keyup.escape="searchQuery = ''; showSearch = false; fetchTodos()"
+                                placeholder="Поиск..."
+                                class="w-[220px] bg-slate-800 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-300 outline-none focus:border-primary/50 shadow-xl placeholder-slate-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-6 items-center">
+                <span class="text-slate-500 text-xs whitespace-nowrap">Срок:</span>
+                <div class="relative flex-1">
+                    <i data-lucide="calendar"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                    <input type="date" x-model="dueDateAfter" @change="fetchTodos()"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
+                        title="После">
+                </div>
+                <span class="text-slate-600 text-xs">—</span>
+                <div class="relative flex-1">
+                    <i data-lucide="calendar"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
+                    <input type="date" x-model="dueDateBefore" @change="fetchTodos()"
+                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
+                        title="До">
+                </div>
+                <button x-show="dueDateAfter || dueDateBefore"
+                    @click="dueDateAfter = ''; dueDateBefore = ''; fetchTodos()"
+                    class="text-slate-500 hover:text-white p-1 rounded-lg transition-all" title="Сбросить">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+
             <!-- Add task button (collapsed) -->
             <button x-show="!showAddForm" @click="openAddForm()"
-                class="flex items-center gap-3 w-full px-5 py-3.5 mb-6 rounded-2xl text-primary hover:bg-white/5 transition-all cursor-pointer group">
+                class="flex items-center gap-3 w-full px-5 py-3.5 mb-4 rounded-2xl text-primary hover:bg-white/5 transition-all cursor-pointer group">
                 <div
                     class="w-6 h-6 rounded-lg border-2 border-primary/40 flex items-center justify-center group-hover:border-primary transition-all">
                     <i data-lucide="plus" class="w-3.5 h-3.5 text-primary"></i>
@@ -296,7 +350,7 @@
             <!-- Add task form (expanded, Google Tasks style) -->
             <div x-show="showAddForm" x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
-                class="mb-6 bg-white/5 border border-primary/30 rounded-2xl p-4 flex flex-col gap-3"
+                class="mb-4 bg-white/5 border border-primary/30 rounded-2xl p-4 flex flex-col gap-3"
                 @keyup.escape="closeAddForm()" @click.outside="if (!newTodo.trim()) closeAddForm()">
                 <!-- Title input -->
                 <input type="text" x-ref="newTodoInput" x-model="newTodo" @keyup.enter="addTodo"
@@ -355,60 +409,6 @@
                         Сохранить
                     </button>
                 </div>
-            </div>
-
-            <div class="flex gap-2 mb-6 items-center">
-                <template x-for="f in ['Все', 'Активные', 'Завершенные']">
-                    <button @click="filter = f"
-                        :class="filter === f ? 'bg-white/5 border-primary-light text-white' : 'border-white/10 text-slate-400'"
-                        class="px-4 py-2 border rounded-xl text-[0.85rem] cursor-pointer transition-all hover:bg-white/5"
-                        x-text="f"></button>
-                </template>
-                <div class="ml-auto relative">
-                    <button
-                        @click="showSearch = !showSearch; if (showSearch) $nextTick(() => $refs.searchInput.focus())"
-                        class="p-2 rounded-xl border transition-all"
-                        :class="showSearch || searchQuery ? 'border-primary/40 text-primary bg-primary/10' : 'border-white/10 text-slate-400 hover:text-white hover:bg-white/5'">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </button>
-                    <div x-show="showSearch" x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                        @click.outside="if (!searchQuery) showSearch = false"
-                        class="absolute right-0 top-full mt-2 z-10">
-                        <div class="relative">
-                            <i data-lucide="search"
-                                class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
-                            <input type="text" x-ref="searchInput" x-model="searchQuery" @input="onSearchInput()"
-                                @keyup.escape="searchQuery = ''; showSearch = false; fetchTodos()"
-                                placeholder="Поиск..."
-                                class="w-[220px] bg-slate-800 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-300 outline-none focus:border-primary/50 shadow-xl placeholder-slate-500">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex gap-2 mb-6 items-center">
-                <span class="text-slate-500 text-xs whitespace-nowrap">Срок:</span>
-                <div class="relative flex-1">
-                    <i data-lucide="calendar"
-                        class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
-                    <input type="date" x-model="dueDateAfter" @change="fetchTodos()"
-                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
-                        title="После">
-                </div>
-                <span class="text-slate-600 text-xs">—</span>
-                <div class="relative flex-1">
-                    <i data-lucide="calendar"
-                        class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
-                    <input type="date" x-model="dueDateBefore" @change="fetchTodos()"
-                        class="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 outline-none focus:border-primary/50 focus:bg-white/10"
-                        title="До">
-                </div>
-                <button x-show="dueDateAfter || dueDateBefore"
-                    @click="dueDateAfter = ''; dueDateBefore = ''; fetchTodos()"
-                    class="text-slate-500 hover:text-white p-1 rounded-lg transition-all" title="Сбросить">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
             </div>
 
             <ul class="flex flex-col gap-3 list-none">
