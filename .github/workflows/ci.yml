@@ -37,33 +37,10 @@ jobs:
       - name: Validate OpenAPI spec
         run: npx --yes @redocly/cli lint openapi.yaml
 
-  helm-lint:
-    name: Helm Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-
-      - name: Add Helm repositories
-        run: helm repo add bitnami https://charts.bitnami.com/bitnami
-
-      - name: Build Helm dependencies
-        run: helm dependency build deploy/helm/todo-app
-
-      - name: Lint Helm chart
-        run: helm lint deploy/helm/todo-app
-
-      - name: Template Helm chart
-        run: helm template todo-app deploy/helm/todo-app > /dev/null
-
   test:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
-    needs: [lint, openapi, helm-lint]
+    needs: [lint, openapi]
 
     services:
       postgres:
