@@ -310,8 +310,6 @@ App is exposed at http://todo.local (Ingress rule with host `todo.local`).
 
 **NGINX Ingress** — used in this project. Kind `extraPortMappings` in `kind-config.yaml` forwards ports 80/443 from the host (or VM) to the control-plane node. The app is accessible at `http://todo.local` — works both locally and on a VM.
 
-**MetalLB** — needed if Kind runs in an environment where `extraPortMappings` is unavailable, or a dedicated LoadBalancer IP on the LAN is required (access from other machines). Not needed in our case.
-
 ━━━━━━━━━━━━━━━━━━━━
 ## Cleanup
 ━━━━━━━━━━━━━━━━━━━━
