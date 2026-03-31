@@ -65,6 +65,10 @@ func (h *TodoHandler) Create(c *gin.Context) {
 
 	todo, err := h.svc.CreateTodo(c.Request.Context(), req.Title, req.DueDate, req.Tags)
 	if err != nil {
+		if errors.Is(err, service.ErrEmptyTitle) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -169,6 +173,10 @@ func (h *TodoHandler) Update(c *gin.Context) {
 
 	todo, err := h.svc.UpdateTodo(c.Request.Context(), uint(id), req.Title, req.Completed, req.DueDate, req.Tags)
 	if err != nil {
+		if errors.Is(err, service.ErrEmptyTitle) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		if errors.Is(err, repository.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
