@@ -117,11 +117,8 @@ API не стартует, пока миграции не завершатся. 
 **Kubernetes:**
 
 ```bash
-kubectl port-forward svc/todo-postgresql 5433:5432 &
-migrate -path=./migrations -database="postgres://postgres:postgres@localhost:5433/todo_db?sslmode=disable" up
+make migrate
 ```
-
-Или: `make migrate`
 
 ### Как загрузить тестовые данные
 
@@ -161,6 +158,34 @@ migrate -path=./migrations -database="postgres://postgres:postgres@localhost:543
 **Запущены и Compose, и Kind одновременно** — два PostgreSQL (один из Docker Compose, второй из Kind) могут конфликтовать по порту 5432. Перед работой с Kind остановите Compose: `docker compose down`
 
 ━━━━━━━━━━━━━━━━━━━━
+## Запуск тестов локально
+━━━━━━━━━━━━━━━━━━━━
+
+### Unit-тесты (база данных не требуется)
+
+```bash
+go test ./internal/handler/... ./internal/service/... -v -race
+```
+
+### Интеграционные тесты (требуется PostgreSQL)
+
+```bash
+# 1. Запустить PostgreSQL
+docker compose up db -d
+
+# 2. Создать тестовую БД и применить миграции
+PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE todo_test;"
+migrate -path migrations \
+  -database "postgres://postgres:postgres@localhost:5432/todo_test?sslmode=disable" up
+
+# 3. Запустить все тесты
+TEST_DB_DSN="host=localhost port=5432 user=postgres password=postgres dbname=todo_test sslmode=disable" \
+  go test ./... -v -race
+```
+
+> **Примечание:** CI использует БД `todo_test`. Docker Compose приложение использует `todo_db`.
+
+━━━━━━━━━━━━━━━━━━━━
 ## Local Kubernetes Cluster
 ━━━━━━━━━━━━━━━━━━━━
 
@@ -172,14 +197,16 @@ make deploy-kind
 
 Одна команда делает всё:
 
-1. Запускает локальный Docker Registry на `localhost:5000`
+1. Создаёт локальный Docker Registry на `localhost:5000`
 2. Создаёт Kind-кластер
 3. Подключает registry к сети Kind
-4. Устанавливает NGINX Ingress Controller
-5. Собирает и пушит Docker-образ
-6. Деплоит PostgreSQL (bitnami/postgresql) и приложение через Helm
-7. Запускает миграции
-8. Добавляет `todo.local` в `/etc/hosts`
+4. Настраивает registry на нодах Kind
+5. Устанавливает NGINX Ingress Controller
+6. Собирает и пушит Docker-образ
+7. Деплоит PostgreSQL (bitnami/postgresql) и приложение через Helm
+8. Запускает миграции
+9. Добавляет `todo.local` в `/etc/hosts`
+10. Запускает smoke test
 
 После этого: http://todo.local
 
@@ -260,11 +287,14 @@ make deploy-kind
 ```
 
 Выполняемые шаги:
-1. Создать Kind-кластер (если не существует)
-2. Собрать и запушить образ в локальный registry (`localhost:5000`)
-3. Запустить Helm deploy
-4. Запустить миграции
-5. Настроить `/etc/hosts`
+1. Создаёт локальный Docker Registry (если не существует)
+2. Создаёт Kind-кластер (если не существует)
+3. Подключает registry к сети Kind
+4. Собирает и пушит образ в локальный registry (`localhost:5000`)
+5. Запускает Helm deploy
+6. Запускает миграции
+7. Настраивает `/etc/hosts`
+8. Запускает smoke test
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Ingress / Service Exposure
@@ -279,8 +309,6 @@ NGINX Ingress Controller установлен через Helm. Kind `extraPortMa
 ━━━━━━━━━━━━━━━━━━━━
 
 **NGINX Ingress** — используется в этом проекте. Kind `extraPortMappings` в `kind-config.yaml` пробрасывает порты 80/443 с хоста (или виртуальной машины) в control-plane ноду. Приложение доступно по `http://todo.local` — работает и локально, и на VM.
-
-**MetalLB** — нужен, если Kind запущен в среде, где `extraPortMappings` недоступен, или нужен выделенный LoadBalancer IP в локальной сети (доступ с других машин). В нашем случае не требуется.
 
 ━━━━━━━━━━━━━━━━━━━━
 ## Cleanup
