@@ -8,3 +8,4 @@ data:
   DB_NAME: {{ .Values.db.name | quote }}
   DB_SSLMODE: {{ .Values.db.sslmode | quote }}
   PORT: "8080"
+  GIN_MODE: "release"
