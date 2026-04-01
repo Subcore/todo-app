@@ -1,4 +1,5 @@
-IMAGE_NAME := localhost:5000/todo-api
+IMAGE_NAME     := localhost:5000/todo-api
+WEB_IMAGE_NAME := localhost:5000/todo-web
 GIT_SHA    := $(shell git rev-parse --short HEAD)
 IMAGE_TAG  := $(GIT_SHA)
 CLUSTER_NAME := kind
@@ -12,7 +13,7 @@ DB_PASS       ?= postgres
 DB_NAME       ?= todo_db
 DB_PORT       ?= 5433
 
-.PHONY: help test lint run deploy-kind build-image create-registry create-cluster connect-registry configure-registry install-ingress push-image helm-deps migrate migrate-down seed helm-deploy ensure-hosts smoke-test delete-cluster delete-registry clean install-docker install-tools
+.PHONY: help test lint run deploy-kind build-image build-web-image create-registry create-cluster connect-registry configure-registry install-ingress push-image push-web-image helm-deps migrate migrate-down seed helm-deploy ensure-hosts smoke-test delete-cluster delete-registry clean install-docker install-tools
 
 .DEFAULT_GOAL := help
 
@@ -29,21 +30,22 @@ lint: ## Run linter
 run: ## Start app locally via docker-compose
 	docker compose up
 
-deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image push-image helm-deps helm-deploy migrate ensure-hosts smoke-test ## Full local deployment pipeline (run 'make install-tools' first, then re-login)
+deploy-kind: create-registry create-cluster connect-registry configure-registry install-ingress build-image build-web-image push-image push-web-image helm-deps helm-deploy migrate ensure-hosts smoke-test ## Full local deployment pipeline (run 'make install-tools' first, then re-login)
 	@echo ""
 	@echo "=== Deployment complete ==="
-	@echo "App:     http://todo.local"
-	@echo "Swagger: http://todo.local/docs"
+	@echo "Web:     http://todo.local/web"
+	@echo "API:     http://todo.local/api"
+	@echo "Swagger: http://todo.local/api/docs"
 	@echo ""
 
 smoke-test: ## Verify the app is responding after deployment
-	@echo "[smoke] Checking http://todo.local/healthz..."
+	@echo "[smoke] Checking http://todo.local/api/healthz..."
 	@TRIES=0; \
-	until curl -sf http://todo.local/healthz >/dev/null 2>&1; do \
+	until curl -sf http://todo.local/api/healthz >/dev/null 2>&1; do \
 		TRIES=$$((TRIES+1)); \
 		if [ $$TRIES -ge 15 ]; then \
 			echo "  [ERROR] App not responding after 15s"; \
-			curl -sv http://todo.local/healthz 2>&1 | sed 's/^/  /'; \
+			curl -sv http://todo.local/api/healthz 2>&1 | sed 's/^/  /'; \
 			exit 1; \
 		fi; \
 		sleep 1; \
@@ -118,10 +120,22 @@ install-ingress: ## Install NGINX Ingress Controller for kind
 		exit 1; \
 	}
 
-push-image: ## Push image to local registry
-	@echo "[7/11] Pushing image to local registry..."
+build-web-image: ## Build frontend Docker image
+	@echo "[6b/11] Building frontend image $(WEB_IMAGE_NAME):$(IMAGE_TAG)..."
+	docker build \
+		-f Dockerfile.web \
+		-t $(WEB_IMAGE_NAME):$(IMAGE_TAG) \
+		-t $(WEB_IMAGE_NAME):latest .
+
+push-image: ## Push API image to local registry
+	@echo "[7/11] Pushing API image to local registry..."
 	docker push $(IMAGE_NAME):$(IMAGE_TAG)
 	docker push $(IMAGE_NAME):latest
+
+push-web-image: ## Push frontend image to local registry
+	@echo "[7b/11] Pushing frontend image to local registry..."
+	docker push $(WEB_IMAGE_NAME):$(IMAGE_TAG)
+	docker push $(WEB_IMAGE_NAME):latest
 
 helm-deps: ## Build Helm chart dependencies
 	@echo "[8/11] Building Helm chart dependencies..."
