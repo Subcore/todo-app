@@ -19,6 +19,17 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: todo-web
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
   migrate:
     image: migrate/migrate
     container_name: todo-migrate

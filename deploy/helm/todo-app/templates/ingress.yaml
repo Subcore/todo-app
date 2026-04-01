@@ -5,17 +5,26 @@ metadata:
   name: {{ include "todo-app.fullname" . }}
   labels:
     {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
-                name: {{ include "todo-app.fullname" . }}
+                name: {{ include "todo-app.fullname" . }}-api
                 port:
                   number: {{ .Values.service.port }}
+          - path: /web(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "todo-app.fullname" . }}-web
+                port:
+                  number: {{ .Values.web.service.port }}
 {{- end }}

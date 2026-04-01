@@ -10,6 +10,24 @@ service:
   port: 80
   targetPort: 8080
 
+web:
+  image:
+    repository: localhost:5000/todo-web
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  resources:
+    limits:
+      cpu: 100m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 32Mi
+
 ingress:
   enabled: true
   className: nginx
