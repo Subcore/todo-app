@@ -1,9 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "todo-app.fullname" . }}
+  name: {{ include "todo-app.fullname" . }}-api
   labels:
     {{- include "todo-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
 spec:
   replicas: {{ .Values.replicaCount }}
   strategy:
@@ -14,13 +15,15 @@ spec:
   selector:
     matchLabels:
       {{- include "todo-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
   template:
     metadata:
       labels:
         {{- include "todo-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
     spec:
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ .Chart.Name }}-api
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:

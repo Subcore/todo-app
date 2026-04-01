@@ -4,6 +4,7 @@ import (
 	"github.com/Subcore/todo-app-v2/internal/handler"
 	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/Subcore/todo-app-v2/internal/service"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -12,13 +13,13 @@ import (
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	// Статические ресурсы
-	r.Static("/assets", "./web/assets")
-
-	// Главная страница фронтенда
-	r.GET("/", func(c *gin.Context) {
-		c.File("./web/index.html")
-	})
+	// CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://todo.local", "http://localhost", "http://localhost:80"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowCredentials: true,
+	}))
 
 	// Спецификация OpenAPI 3.0
 	r.StaticFile("/openapi.yaml", "./openapi.yaml")

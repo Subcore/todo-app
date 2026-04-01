@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM golang:1.24.1-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache git
@@ -30,8 +30,8 @@ WORKDIR /app
 
 # Copy the binary from the build stage
 COPY --from=builder /app/main .
-# Copy static files and OpenAPI spec
-COPY --from=builder /app/web ./web
+# Copy only docs.html (frontend now served by separate Nginx container)
+COPY --from=builder /app/web/docs.html ./web/docs.html
 COPY --from=builder /app/openapi.yaml ./openapi.yaml
 
 # Use the non-root user
