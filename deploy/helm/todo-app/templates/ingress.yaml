@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "todo-app.fullname" . }}
+  name: {{ include "todo-app.fullname" . }}-api
   labels:
     {{- include "todo-app.labels" . | nindent 4 }}
   annotations:
@@ -20,6 +20,21 @@ spec:
                 name: {{ include "todo-app.fullname" . }}-api
                 port:
                   number: {{ .Values.service.port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "todo-app.fullname" . }}-web
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
           - path: /web(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
