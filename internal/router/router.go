@@ -21,16 +21,8 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		AllowCredentials: true,
 	}))
 
-	// Спецификация OpenAPI 3.0
-	r.StaticFile("/openapi.yaml", "./openapi.yaml")
+	// Спецификация OpenAPI 3.0 и Swagger UI — доступны через /api/docs
 
-	// Страница документации Swagger UI
-	r.GET("/docs", func(c *gin.Context) {
-		c.File("./web/docs.html")
-	})
-	r.GET("/docs/", func(c *gin.Context) {
-		c.Redirect(301, "/docs")
-	})
 
 	// Инициализация слоёв приложения
 	repo := repository.NewTodoRepository(db)
@@ -45,6 +37,15 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// API группа
 	api := r.Group("/api")
 	{
+		// Документация Swagger UI
+		api.StaticFile("/openapi.yaml", "./openapi.yaml")
+		api.GET("/docs", func(c *gin.Context) {
+			c.File("./web/docs.html")
+		})
+		api.GET("/docs/", func(c *gin.Context) {
+			c.Redirect(301, "/api/docs")
+		})
+
 		// Эндпоинты здоровья также доступны через /api
 		api.GET("/healthz", hh.Healthz)
 		api.GET("/readyz", hh.Readyz)
