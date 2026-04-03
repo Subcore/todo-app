@@ -1,351 +1,358 @@
-openapi: "3.0.3"
+openapi: 3.0.0
 info:
   title: Todo API
+  version: 1.0.0
   description: RESTful API for managing todo items with soft delete support
-  version: "1.0.0"
-
-servers:
-  - url: http://todo.local/api
-    description: Kubernetes (kind) via Ingress — API service
-  - url: http://todo.local/web
-    description: Kubernetes (kind) via Ingress — Web service
-  - url: http://localhost:8080
-    description: Docker Compose
-
-security: []
-
-tags:
-  - name: todos
-    description: Todo item operations
-  - name: health
-    description: Health check endpoints
-
+  contact: {}
 paths:
   /api/v1/todos:
     get:
-      tags: [todos]
-      summary: Get all todos
-      description: Retrieve a list of all active todo items with optional filters
-      operationId: getAllTodos
+      description: Возвращает список всех задач с возможностью фильтрации
       parameters:
-        - name: completed
+        - description: Фильтр по статусу выполнения
           in: query
-          description: Filter by completion status
-          required: false
+          name: completed
           schema:
             type: boolean
-        - name: search
+        - description: Поиск по заголовку (без учёта регистра)
           in: query
-          description: Search todos by title (case-insensitive substring match)
-          required: false
+          name: search
           schema:
             type: string
-        - name: due_before
+        - description: Срок до (RFC3339)
           in: query
-          description: Filter todos due before this datetime (RFC3339)
-          required: false
+          name: due_before
           schema:
             type: string
-            format: date-time
-            example: "2024-12-31T23:59:59Z"
-        - name: due_after
+        - description: Срок после (RFC3339)
           in: query
-          description: Filter todos due after this datetime (RFC3339)
-          required: false
+          name: due_after
           schema:
             type: string
-            format: date-time
-            example: "2024-01-01T00:00:00Z"
       responses:
         "200":
-          description: List of todos
+          description: OK
           content:
             application/json:
               schema:
-                type: array
                 items:
-                  $ref: "#/components/schemas/Todo"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+                  $ref: "#/components/schemas/model.Todo"
+                type: array
         "500":
-          $ref: "#/components/responses/InternalError"
-
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Получить все задачи
+      tags:
+        - todos
     post:
-      tags: [todos]
-      summary: Create a todo
-      description: Create a new todo item with a title
-      operationId: createTodo
+      description: Создаёт новую задачу с заголовком
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateTodoRequest"
+              $ref: "#/components/schemas/handler.createTodoRequest"
+        description: Тело запроса задачи
+        required: true
       responses:
         "201":
-          description: Todo created
+          description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Todo"
+                $ref: "#/components/schemas/model.Todo"
         "400":
-          $ref: "#/components/responses/BadRequest"
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "500":
-          $ref: "#/components/responses/InternalError"
-
-  /api/v1/todos/clear-completed:
-    post:
-      tags: [todos]
-      summary: Delete all completed todos (Soft Delete)
-      description: Soft-delete all todo items that are marked as completed
-      operationId: clearCompleted
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Создать задачу
+      tags:
+        - todos
+  "/api/v1/todos/{id}":
+    delete:
+      description: Удаляет задачу по ID. Это мягкое удаление (через gorm.DeletedAt).
+        Запись остаётся в базе с меткой времени deleted_at.
+      parameters:
+        - description: ID задачи
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
       responses:
         "204":
-          description: No Content
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /api/v1/todos/deleted:
-    get:
-      tags: [todos]
-      summary: Get all deleted todos
-      description: Retrieve a list of all soft-deleted todo items
-      operationId: getDeletedTodos
-      responses:
-        "200":
-          description: List of soft-deleted todos
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Todo"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /api/v1/todos/{id}:
-    get:
-      tags: [todos]
-      summary: Get a todo by ID
-      description: Retrieve a todo item using its ID
-      operationId: getTodo
-      parameters:
-        - $ref: "#/components/parameters/TodoID"
-      responses:
-        "200":
-          description: Todo found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Todo"
+          description: Нет содержимого
         "400":
-          $ref: "#/components/responses/BadRequest"
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "404":
-          $ref: "#/components/responses/NotFound"
-
-    put:
-      tags: [todos]
-      summary: Update a todo
-      description: Update title, completion status, due date, or tags of a todo item
-      operationId: updateTodo
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Удалить задачу (мягкое удаление)
+      tags:
+        - todos
+    get:
+      description: Возвращает задачу по её идентификатору
       parameters:
-        - $ref: "#/components/parameters/TodoID"
+        - description: ID задачи
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/model.Todo"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Получить задачу по ID
+      tags:
+        - todos
+    put:
+      description: Обновляет заголовок или статус задачи
+      parameters:
+        - description: ID задачи
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateTodoRequest"
+              $ref: "#/components/schemas/handler.updateTodoRequest"
+        description: Тело запроса обновления задачи
+        required: true
       responses:
         "200":
-          description: Todo updated
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Todo"
+                $ref: "#/components/schemas/model.Todo"
         "400":
-          $ref: "#/components/responses/BadRequest"
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "500":
-          $ref: "#/components/responses/InternalError"
-
-    delete:
-      tags: [todos]
-      summary: Delete a todo (Soft Delete)
-      description: Soft-delete a todo item by its ID. The record remains in the database with a deleted_at timestamp.
-      operationId: deleteTodo
-      parameters:
-        - $ref: "#/components/parameters/TodoID"
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Обновить задачу
+      tags:
+        - todos
+  /api/v1/todos/clear-completed:
+    post:
+      description: Удаляет все задачи со статусом «выполнено». Это мягкое удаление
+        (через gorm.DeletedAt).
       responses:
         "204":
-          description: No Content
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "404":
-          $ref: "#/components/responses/NotFound"
+          description: Нет содержимого
         "500":
-          $ref: "#/components/responses/InternalError"
-
-  /api/healthz:
-    get:
-      tags: [health]
-      summary: Liveness probe
-      description: Returns 200 OK if the service is alive (via /api path)
-      operationId: healthz
-      responses:
-        "200":
-          description: Service is alive
+          description: Internal Server Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusResponse"
-
-  /api/readyz:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Удалить все выполненные задачи (мягкое удаление)
+      tags:
+        - todos
+  /api/v1/todos/deleted:
     get:
-      tags: [health]
-      summary: Readiness probe
-      description: Returns 200 OK if the service is ready to accept traffic (DB connection is active, via /api path)
-      operationId: readyz
+      description: Возвращает список всех мягко удалённых задач
       responses:
         "200":
-          description: Service is ready
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusResponse"
+                items:
+                  $ref: "#/components/schemas/model.Todo"
+                type: array
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Получить все удалённые задачи
+      tags:
+        - todos
+  /healthz:
+    get:
+      description: Возвращает 200 OK если сервис запущен
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Проверка жизнеспособности
+      tags:
+        - health
+  /readyz:
+    get:
+      description: Возвращает 200 OK если сервис готов принимать трафик (соединение с
+        БД активно)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "503":
-          description: Service unavailable (DB unreachable)
+          description: Service Unavailable
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StatusResponse"
-
+                additionalProperties:
+                  type: string
+                type: object
+      summary: Проверка готовности
+      tags:
+        - health
 components:
-  parameters:
-    TodoID:
-      name: id
-      in: path
-      required: true
-      description: Numeric ID of the todo
-      schema:
-        type: integer
-        format: int64
-        minimum: 1
-        example: 1
-
   schemas:
-    Todo:
-      type: object
+    handler.createTodoRequest:
       properties:
-        id:
-          type: integer
-          format: int64
-          example: 1
-        title:
-          type: string
-          maxLength: 255
-          example: "Buy groceries"
-        completed:
-          type: boolean
-          example: false
         due_date:
           type: string
-          format: date-time
-          nullable: true
-          example: "2024-12-31T23:59:59Z"
         tags:
-          type: array
           items:
             type: string
-          example: ["shopping", "personal"]
+          type: array
+        title:
+          maxLength: 255
+          type: string
+      required:
+        - title
+      type: object
+    handler.updateTodoRequest:
+      properties:
+        completed:
+          type: boolean
+        due_date:
+          type: string
+        tags:
+          items:
+            type: string
+          type: array
+        title:
+          maxLength: 255
+          type: string
+      required:
+        - title
+      type: object
+    model.Todo:
+      properties:
+        completed:
+          description: Статус выполнения
+          type: boolean
         created_at:
-          type: string
+          description: Время создания
           format: date-time
-          example: "2024-01-15T10:30:00Z"
-        updated_at:
           type: string
-          format: date-time
-          example: "2024-01-15T10:30:00Z"
         deleted_at:
-          type: string
+          description: Время мягкого удаления
           format: date-time
-          nullable: true
-          example: null
-
-    CreateTodoRequest:
-      type: object
-      required:
-        - title
-      properties:
-        title:
           type: string
-          maxLength: 255
-          example: "Buy groceries"
         due_date:
-          type: string
+          description: Срок выполнения
+          example: 2023-12-31T23:59:59Z
           format: date-time
-          nullable: true
-          example: "2024-12-31T23:59:59Z"
+          type: string
+        id:
+          description: Уникальный идентификатор
+          type: integer
         tags:
-          type: array
+          description: Теги задачи
           items:
             type: string
-          example: ["shopping", "personal"]
-
-    UpdateTodoRequest:
-      type: object
-      required:
-        - title
-      properties:
-        title:
-          type: string
-          maxLength: 255
-          example: "Buy groceries (updated)"
-        completed:
-          type: boolean
-          example: true
-        due_date:
-          type: string
-          format: date-time
-          nullable: true
-          example: "2024-12-31T23:59:59Z"
-        tags:
           type: array
-          items:
-            type: string
-          example: ["shopping"]
-
-    ErrorResponse:
-      type: object
-      properties:
-        error:
+        title:
+          description: Заголовок задачи (макс. 255 символов)
           type: string
-          example: "invalid ID"
-
-    StatusResponse:
-      type: object
-      properties:
-        status:
+        updated_at:
+          description: Время последнего обновления
+          format: date-time
           type: string
-          example: "ok"
-
-  responses:
-    BadRequest:
-      description: Bad request
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorResponse"
+      type: object
