@@ -39,13 +39,13 @@ deploy-kind: create-registry create-cluster connect-registry configure-registry 
 	@echo ""
 
 smoke-test: ## Verify the app is responding after deployment
-	@echo "[smoke] Checking http://todo.local/api/healthz..."
+	@echo "[smoke] Checking http://todo.local/api/v1/healthz..."
 	@TRIES=0; \
-	until curl -sf http://todo.local/api/healthz >/dev/null 2>&1; do \
+	until curl -sf http://todo.local/api/v1/healthz >/dev/null 2>&1; do \
 		TRIES=$$((TRIES+1)); \
 		if [ $$TRIES -ge 15 ]; then \
 			echo "  [ERROR] App not responding after 15s"; \
-			curl -sv http://todo.local/api/healthz 2>&1 | sed 's/^/  /'; \
+			curl -sv http://todo.local/api/v1/healthz 2>&1 | sed 's/^/  /'; \
 			exit 1; \
 		fi; \
 		sleep 1; \

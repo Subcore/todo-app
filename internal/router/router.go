@@ -38,22 +38,33 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	h := handler.NewTodoHandler(svc)
 	hh := handler.NewHealthHandler(db)
 
-	// Эндпоинты проверки состояния
+	// Эндпоинты проверки состояния (обслуживаются на двух путях для гибкости)
 	r.GET("/healthz", hh.Healthz)
 	r.GET("/readyz", hh.Readyz)
 
-	// API версии 1
-	api := r.Group("/api/v1")
+	// API группа
+	api := r.Group("/api")
 	{
-		todoGroup := api.Group("/todos")
+		// Эндпоинты здоровья также доступны через /api
+		api.GET("/healthz", hh.Healthz)
+		api.GET("/readyz", hh.Readyz)
+
+		// API версии 1
+		v1 := api.Group("/v1")
 		{
-			todoGroup.POST("", h.Create)
-			todoGroup.GET("", h.GetAll)
-			todoGroup.GET("/:id", h.Get)
-			todoGroup.PUT("/:id", h.Update)
-			todoGroup.DELETE("/:id", h.Delete)
-			todoGroup.POST("/clear-completed", h.DeleteCompleted)
-			todoGroup.GET("/deleted", h.GetDeleted)
+			v1.GET("/healthz", hh.Healthz)
+			v1.GET("/readyz", hh.Readyz)
+
+			todoGroup := v1.Group("/todos")
+			{
+				todoGroup.POST("", h.Create)
+				todoGroup.GET("", h.GetAll)
+				todoGroup.GET("/:id", h.Get)
+				todoGroup.PUT("/:id", h.Update)
+				todoGroup.DELETE("/:id", h.Delete)
+				todoGroup.POST("/clear-completed", h.DeleteCompleted)
+				todoGroup.GET("/deleted", h.GetDeleted)
+			}
 		}
 	}
 
