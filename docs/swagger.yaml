@@ -1,0 +1,339 @@
+definitions:
+  handler.createTodoRequest:
+    properties:
+      due_date:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        maxLength: 255
+        type: string
+    required:
+    - title
+    type: object
+  handler.updateTodoRequest:
+    properties:
+      completed:
+        type: boolean
+      due_date:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        maxLength: 255
+        type: string
+    required:
+    - title
+    type: object
+  model.Todo:
+    properties:
+      completed:
+        description: Статус выполнения
+        type: boolean
+      created_at:
+        description: Время создания
+        format: date-time
+        type: string
+      deleted_at:
+        description: Время мягкого удаления
+        format: date-time
+        type: string
+      due_date:
+        description: Срок выполнения
+        example: "2023-12-31T23:59:59Z"
+        format: date-time
+        type: string
+      id:
+        description: Уникальный идентификатор
+        type: integer
+      tags:
+        description: Теги задачи
+        items:
+          type: string
+        type: array
+      title:
+        description: Заголовок задачи (макс. 255 символов)
+        type: string
+      updated_at:
+        description: Время последнего обновления
+        format: date-time
+        type: string
+    type: object
+info:
+  title: Todo API
+  version: "1.0.0"
+  description: RESTful API for managing todo items with soft delete support
+  contact: {}
+paths:
+  /api/v1/todos:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех задач с возможностью фильтрации
+      parameters:
+      - description: Фильтр по статусу выполнения
+        in: query
+        name: completed
+        type: boolean
+      - description: Поиск по заголовку (без учёта регистра)
+        in: query
+        name: search
+        type: string
+      - description: Срок до (RFC3339)
+        in: query
+        name: due_before
+        type: string
+      - description: Срок после (RFC3339)
+        in: query
+        name: due_after
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Todo'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить все задачи
+      tags:
+      - todos
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую задачу с заголовком
+      parameters:
+      - description: Тело запроса задачи
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createTodoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Todo'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать задачу
+      tags:
+      - todos
+  /api/v1/todos/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет задачу по ID. Это мягкое удаление (через gorm.DeletedAt).
+        Запись остаётся в базе с меткой времени deleted_at.
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Нет содержимого
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить задачу (мягкое удаление)
+      tags:
+      - todos
+    get:
+      consumes:
+      - application/json
+      description: Возвращает задачу по её идентификатору
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Todo'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить задачу по ID
+      tags:
+      - todos
+    put:
+      consumes:
+      - application/json
+      description: Обновляет заголовок или статус задачи
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Тело запроса обновления задачи
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateTodoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Todo'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить задачу
+      tags:
+      - todos
+  /api/v1/todos/clear-completed:
+    post:
+      consumes:
+      - application/json
+      description: Удаляет все задачи со статусом «выполнено». Это мягкое удаление
+        (через gorm.DeletedAt).
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Нет содержимого
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить все выполненные задачи (мягкое удаление)
+      tags:
+      - todos
+  /api/v1/todos/deleted:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех мягко удалённых задач
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Todo'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить все удалённые задачи
+      tags:
+      - todos
+  /healthz:
+    get:
+      description: Возвращает 200 OK если сервис запущен
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Проверка жизнеспособности
+      tags:
+      - health
+  /readyz:
+    get:
+      description: Возвращает 200 OK если сервис готов принимать трафик (соединение
+        с БД активно)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Проверка готовности
+      tags:
+      - health
+swagger: "2.0"
