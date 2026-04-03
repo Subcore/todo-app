@@ -251,9 +251,9 @@ paths:
       summary: Получить все удалённые задачи
       tags:
         - todos
-  /healthz:
+  /api/healthz:
     get:
-      description: Возвращает 200 OK если сервис запущен
+      description: Возвращает 200 OK если сервис запущен. Доступен снаружи через ingress по пути /api/healthz.
       responses:
         "200":
           description: OK
@@ -266,10 +266,10 @@ paths:
       summary: Проверка жизнеспособности
       tags:
         - health
-  /readyz:
+  /api/readyz:
     get:
       description: Возвращает 200 OK если сервис готов принимать трафик (соединение с
-        БД активно)
+        БД активно). Доступен снаружи через ingress по пути /api/readyz.
       responses:
         "200":
           description: OK
