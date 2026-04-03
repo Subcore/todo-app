@@ -33,6 +33,7 @@ COPY --from=builder /app/main .
 # Copy only docs.html (frontend now served by separate Nginx container)
 COPY --from=builder /app/web/docs.html ./web/docs.html
 COPY --from=builder /app/openapi.yaml ./openapi.yaml
+COPY --from=builder /app/migrations ./migrations
 
 # Use the non-root user
 USER appuser

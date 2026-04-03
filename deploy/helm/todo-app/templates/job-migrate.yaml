@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "todo-app.fullname" . }}-migrate
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "todo-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: copy-migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["cp", "-r", "/app/migrations/.", "/migrations/"]
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      containers:
+        - name: migrate
+          image: migrate/migrate
+          command:
+            - migrate
+            - -path=/migrations/
+            - -database
+            - postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
+            - up
+          envFrom:
+            - configMapRef:
+                name: {{ include "todo-app.fullname" . }}-config
+            - secretRef:
+                name: {{ include "todo-app.fullname" . }}-secret
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          emptyDir: {}
