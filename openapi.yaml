@@ -4,12 +4,17 @@ info:
   version: 1.0.0
   description: RESTful API for managing todo items with soft delete support
   contact: {}
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: http://todo.local
     description: Kubernetes (local)
+security: []
 paths:
   /api/v1/todos:
     get:
+      operationId: listTodos
       description: Возвращает список всех задач с возможностью фильтрации
       parameters:
         - description: Фильтр по статусу выполнения
@@ -41,6 +46,14 @@ paths:
                 items:
                   $ref: "#/components/schemas/model.Todo"
                 type: array
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "500":
           description: Internal Server Error
           content:
@@ -53,6 +66,7 @@ paths:
       tags:
         - todos
     post:
+      operationId: createTodo
       description: Создаёт новую задачу с заголовком
       requestBody:
         content:
@@ -89,6 +103,7 @@ paths:
         - todos
   "/api/v1/todos/{id}":
     delete:
+      operationId: deleteTodo
       description: Удаляет задачу по ID. Это мягкое удаление (через gorm.DeletedAt).
         Запись остаётся в базе с меткой времени deleted_at.
       parameters:
@@ -129,6 +144,7 @@ paths:
       tags:
         - todos
     get:
+      operationId: getTodo
       description: Возвращает задачу по её идентификатору
       parameters:
         - description: ID задачи
@@ -164,6 +180,7 @@ paths:
       tags:
         - todos
     put:
+      operationId: updateTodo
       description: Обновляет заголовок или статус задачи
       parameters:
         - description: ID задачи
@@ -215,11 +232,20 @@ paths:
         - todos
   /api/v1/todos/clear-completed:
     post:
+      operationId: clearCompleted
       description: Удаляет все задачи со статусом «выполнено». Это мягкое удаление
         (через gorm.DeletedAt).
       responses:
         "204":
           description: Нет содержимого
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "500":
           description: Internal Server Error
           content:
@@ -233,6 +259,7 @@ paths:
         - todos
   /api/v1/todos/deleted:
     get:
+      operationId: listDeletedTodos
       description: Возвращает список всех мягко удалённых задач
       responses:
         "200":
@@ -243,6 +270,14 @@ paths:
                 items:
                   $ref: "#/components/schemas/model.Todo"
                 type: array
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
         "500":
           description: Internal Server Error
           content:
@@ -256,10 +291,27 @@ paths:
         - todos
   /api/healthz:
     get:
+      operationId: getHealthz
       description: Возвращает 200 OK если сервис запущен. Доступен снаружи через ingress по пути /api/healthz.
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+        "503":
+          description: Service Unavailable
           content:
             application/json:
               schema:
@@ -271,11 +323,20 @@ paths:
         - health
   /api/readyz:
     get:
+      operationId: getReadyz
       description: Возвращает 200 OK если сервис готов принимать трафик (соединение с
         БД активно). Доступен снаружи через ingress по пути /api/readyz.
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  type: string
+                type: object
+        "404":
+          description: Not Found
           content:
             application/json:
               schema:
