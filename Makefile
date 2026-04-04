@@ -8,6 +8,7 @@ HELM_CHART   := ./deploy/helm/todo-app
 INGRESS_NGINX_VERSION := v1.12.1
 REGISTRY_NAME := kind-registry
 REGISTRY_PORT := 5000
+REGISTRY_IMAGE := registry:3
 DB_USER       ?= postgres
 DB_PASS       ?= postgres
 DB_NAME       ?= todo_db
@@ -70,7 +71,7 @@ create-registry: ## Create local Docker registry if not running
 		echo "  Registry '$(REGISTRY_NAME)' already running, skipping."; \
 	else \
 		echo "  Starting local Docker registry on port $(REGISTRY_PORT)..."; \
-		docker run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):5000" --network bridge --name $(REGISTRY_NAME) registry:2; \
+		docker run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):5000" --network bridge --name $(REGISTRY_NAME) $(REGISTRY_IMAGE); \
 	fi
 
 create-cluster: ## Create kind cluster if it does not exist
