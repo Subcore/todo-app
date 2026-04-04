@@ -125,6 +125,7 @@ build-web-image: ## Build frontend Docker image
 	@echo "[6b/11] Building frontend image $(WEB_IMAGE_NAME):$(IMAGE_TAG)..."
 	docker build \
 		-f Dockerfile.web \
+		--build-arg GIT_SHA=$(GIT_SHA) \
 		-t $(WEB_IMAGE_NAME):$(IMAGE_TAG) \
 		-t $(WEB_IMAGE_NAME):latest .
 
@@ -153,6 +154,8 @@ helm-deploy: ## Deploy via Helm (API + PostgreSQL + Ingress)
 	@helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
 		--set image.repository=$(IMAGE_NAME) \
 		--set image.tag=$(IMAGE_TAG) \
+		--set web.image.repository=$(WEB_IMAGE_NAME) \
+		--set web.image.tag=$(IMAGE_TAG) \
 		--wait --timeout 120s || { \
 		echo ""; \
 		echo "  [ERROR] Helm deploy timed out. Pod status:"; \
