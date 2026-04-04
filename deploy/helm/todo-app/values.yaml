@@ -11,6 +11,7 @@ service:
   targetPort: 8080
 
 web:
+  baseHref: "/web/"
   image:
     repository: localhost:5000/todo-web
     tag: latest

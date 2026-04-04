@@ -21,6 +21,9 @@ spec:
         - name: {{ .Chart.Name }}-web
           image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          env:
+            - name: BASE_HREF
+              value: {{ .Values.web.baseHref | default "/web/" | quote }}
           ports:
             - containerPort: {{ .Values.web.service.targetPort }}
               protocol: TCP
