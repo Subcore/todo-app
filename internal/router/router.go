@@ -1,6 +1,8 @@
 package router
 
 import (
+	"os"
+
 	"github.com/Subcore/todo-app-v2/internal/handler"
 	"github.com/Subcore/todo-app-v2/internal/repository"
 	"github.com/Subcore/todo-app-v2/internal/service"
@@ -37,14 +39,16 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// API группа
 	api := r.Group("/api")
 	{
-		// Документация Swagger UI
-		api.StaticFile("/openapi.yaml", "./openapi.yaml")
-		api.GET("/docs", func(c *gin.Context) {
-			c.File("./web/docs.html")
-		})
-		api.GET("/docs/", func(c *gin.Context) {
-			c.Redirect(301, "/api/docs")
-		})
+		// Документация Swagger UI — только если ENABLE_SWAGGER=true
+		if os.Getenv("ENABLE_SWAGGER") == "true" {
+			api.StaticFile("/openapi.yaml", "./openapi.yaml")
+			api.GET("/docs", func(c *gin.Context) {
+				c.File("./web/docs.html")
+			})
+			api.GET("/docs/", func(c *gin.Context) {
+				c.Redirect(301, "/api/docs")
+			})
+		}
 
 		// Эндпоинты здоровья также доступны через /api
 		api.GET("/healthz", hh.Healthz)

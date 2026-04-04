@@ -28,6 +28,8 @@ web:
       cpu: 50m
       memory: 32Mi
 
+enableSwagger: false
+
 ingress:
   enabled: true
   className: nginx
