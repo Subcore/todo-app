@@ -1,0 +1,21 @@
+---
+- name: Deploy Todo App
+  hosts: servers
+  become: yes
+
+  vars:
+    app_user: todo
+    app_dir: /opt/todo-api
+    web_dir: /var/www/todo
+    app_port: 8080
+    server_ip: 178.104.160.66
+
+    db_name: todo_db
+    db_user: todo
+    db_password: todo_secret
+
+  roles:
+    - postgresql
+    - backend
+    - web
+    - nginx
