@@ -1,0 +1,7 @@
+---
+# Перезапуск backend — вызывается когда обновился бинарник, .env или systemd unit
+- name: restart backend
+  systemd:
+    name: todo-api
+    state: restarted
+    daemon_reload: yes

@@ -1,0 +1,6 @@
+---
+# Перезапуск PostgreSQL — вызывается через notify когда меняется pg_hba.conf
+- name: restart postgresql
+  service:
+    name: postgresql
+    state: restarted

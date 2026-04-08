@@ -302,3 +302,20 @@ install-tools: ## Install all required tools (kind, kubectl, helm, golang-migrat
 	fi; \
 	echo ""; \
 	echo "=== All tools ready ==="
+
+# ─── Ansible VPS deployment ───
+
+build-linux: ## Build Go binary for Linux amd64
+	@echo "Building Linux binary..."
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o todo-api ./cmd/api/main.go
+	@echo "Binary ready: ./todo-api"
+
+ansible-deploy: ## Run Ansible playbook to deploy to VPS
+	cd ansible && ansible-playbook playbook.yml
+
+deploy-vps: build-linux ansible-deploy ## Full VPS deploy: build binary + run Ansible
+	@echo ""
+	@echo "=== VPS Deployment complete ==="
+	@echo "App: http://YOUR_SERVER_IP"
+	@echo "API: http://YOUR_SERVER_IP/api"
+	@echo ""

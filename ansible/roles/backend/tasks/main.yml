@@ -1,0 +1,95 @@
+---
+# Роль: деплой Go-бинарника на сервер
+# Источник: Dockerfile (стадия builder) — там собирается бинарник из cmd/api/main.go
+# Здесь мы делаем то же самое, но бинарник собран ЛОКАЛЬНО и копируется через Ansible
+
+# 1. Создаём системного пользователя для запуска приложения
+# В Dockerfile это "adduser -D -g '' appuser"
+- name: Create application user
+  user:
+    name: "{{ app_user }}"
+    system: yes
+    shell: /usr/sbin/nologin   # не даём логиниться — только для запуска сервиса
+    create_home: no
+
+# 2. Создаём директорию для приложения
+- name: Create application directory
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+
+# 3. Собираем бинарник локально (на твоём Mac)
+# delegate_to: localhost — выполняется на твоей машине, не на сервере
+# Аналог стадии builder в Dockerfile:18
+- name: Build backend binary locally
+  delegate_to: localhost
+  become: false
+  shell: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o {{ playbook_dir }}/../todo-api ./cmd/api/main.go
+  args:
+    chdir: "{{ playbook_dir }}/.."    # корень проекта
+
+# 4. Копируем собранный бинарник на сервер
+- name: Copy backend binary
+  copy:
+    src: "{{ playbook_dir }}/../todo-api"
+    dest: "{{ app_dir }}/todo-api"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0755"
+  notify: restart backend
+
+# 4. Копируем файл миграции на сервер
+# В docker-compose это делает отдельный контейнер migrate
+# Здесь — просто копируем SQL и выполняем через psql
+- name: Create migrations directory
+  file:
+    path: "{{ app_dir }}/migrations"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+
+- name: Copy migration files
+  copy:
+    src: "{{ playbook_dir }}/../migrations/"
+    dest: "{{ app_dir }}/migrations/"
+
+# 5. Накатываем миграцию
+# В docker-compose это контейнер migrate/migrate
+# Здесь используем psql напрямую — проще, не нужен отдельный инструмент
+- name: Run database migrations
+  become_user: postgres
+  shell: psql -d {{ db_name }} -f {{ app_dir }}/migrations/000001_create_todos_table.up.sql
+  args:
+    executable: /bin/bash
+  changed_when: false    # SQL идемпотентен (CREATE TABLE IF NOT EXISTS)
+
+# 6. Создаём .env файл с настройками подключения к БД
+# Источник переменных: docker-compose.yaml → environment секция сервиса api
+- name: Create environment file
+  template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_user }}"
+    mode: "0600"               # только владелец читает — тут пароль от БД
+  notify: restart backend
+
+# 7. Создаём systemd-сервис
+# Это замена "docker run" — systemd управляет процессом:
+# автозапуск, рестарт при падении, логи через journalctl
+- name: Create systemd service
+  template:
+    src: todo-api.service.j2
+    dest: /etc/systemd/system/todo-api.service
+  notify: restart backend
+
+# 8. Запускаем сервис
+- name: Enable and start backend service
+  systemd:
+    name: todo-api
+    enabled: yes
+    state: started
+    daemon_reload: yes
