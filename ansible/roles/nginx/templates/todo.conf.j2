@@ -1,26 +1,24 @@
-# Конфиг nginx для todo-app
-# Основан на web/nginx.conf, но адаптирован для работы без Docker:
-# - убран Docker DNS resolver (127.0.0.11)
-# - backend доступен на localhost вместо имени контейнера "api"
+# API Gateway
 server {
     listen 80;
     server_name {{ server_ip }};
 
-    # Статика фронтенда — файлы из роли web лежат в {{ web_dir }}
+    location /web/ {
+        proxy_pass http://127.0.0.1:{{ web_port }}/;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:{{ app_port }};
+    }
+}
+
+# Web Nginx
+server {
+    listen 127.0.0.1:{{ web_port }};
     root {{ web_dir }};
     index index.html;
 
     location / {
         try_files $uri $uri/ /index.html;
-    }
-
-    # Проксирование API на Go-backend
-    # В Docker было: proxy_pass http://api:8080
-    # Здесь backend работает как systemd-сервис на localhost
-    location /api/ {
-        proxy_pass http://127.0.0.1:{{ app_port }};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
