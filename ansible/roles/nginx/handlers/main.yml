@@ -1,0 +1,7 @@
+---
+# Reload nginx — применяет новый конфиг без обрыва соединений
+# reload (не restart) — стандартная практика для nginx
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded

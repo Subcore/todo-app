@@ -17,7 +17,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://todo.local", "http://localhost", "http://localhost:80"},
+		AllowOrigins:     []string{"http://todo.local", "http://localhost", "http://localhost:80", "http://178.104.160.66"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
 		AllowCredentials: true,
