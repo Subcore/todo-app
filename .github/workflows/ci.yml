@@ -120,17 +120,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set image tags
         id: meta
-        run: echo "tag=ghcr.io/${OWNER,,}/todo-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "api=ghcr.io/${OWNER,,}/todo-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "web=ghcr.io/${OWNER,,}/todo-web:${{ github.sha }}" >> "$GITHUB_OUTPUT"
         env:
           OWNER: ${{ github.repository_owner }}
 
-      - name: Build and push image
+      - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: ${{ github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.meta.outputs.tag }}
+          tags: ${{ steps.meta.outputs.api }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.web }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
