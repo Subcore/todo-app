@@ -1,0 +1,31 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: todo-app
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: ssh://git@github.com/Subcore/todo-app-v2.git
+  ref:
+    branch: main
+  secretRef:
+    name: flux-system
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: todo-app
+  namespace: todo-app
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: deploy/helm/todo-app
+      sourceRef:
+        kind: GitRepository
+        name: todo-app
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: todo-app-values
+      optional: false
