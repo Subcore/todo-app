@@ -319,3 +319,28 @@ deploy-vps: build-linux ansible-deploy ## Full VPS deploy: build binary + run An
 	@echo "App: http://YOUR_SERVER_IP"
 	@echo "API: http://YOUR_SERVER_IP/api"
 	@echo ""
+
+# ─── Terraform GCP ───
+
+GCP_PROJECT ?= my-gcp-project-id
+
+tf-bootstrap: ## Create GCS bucket for Terraform state
+	cd terraform/bootstrap && terraform init && terraform apply -var="project_id=$(GCP_PROJECT)"
+
+tf-init: ## Init Terraform with GCS backend
+	cd terraform && terraform init -backend-config="bucket=$(GCP_PROJECT)-tfstate"
+
+tf-get: ## Download Terraform modules
+	cd terraform && terraform get
+
+tf-plan: ## Plan Terraform changes
+	cd terraform && terraform plan
+
+tf-apply: ## Apply Terraform changes
+	cd terraform && terraform apply
+
+tf-destroy: ## Destroy all GCP infrastructure
+	cd terraform && terraform destroy
+
+tf-kubeconfig: ## Configure kubectl for GKE
+	gcloud container clusters get-credentials todo-cluster --zone asia-southeast1-b --project $(GCP_PROJECT)
