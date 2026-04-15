@@ -320,3 +320,126 @@ App is exposed at http://todo.local (Ingress rule with host `todo.local`).
 | Docker Compose | `docker compose down -v` | Stop + delete DB data |
 | Kubernetes | `make delete-cluster` | Delete Kind cluster |
 | Kubernetes | `make clean` | Cluster + registry |
+| GCP | `make tf-destroy GCP_PROJECT=$GCP_PROJECT` | Destroy GKE cluster + VPC |
+
+━━━━━━━━━━━━━━━━━━━━
+## GCP Deployment (GKE)
+━━━━━━━━━━━━━━━━━━━━
+
+Deploy the app to Google Kubernetes Engine with Terraform and Helm.
+
+### Prerequisites
+
+```bash
+brew install google-cloud-sdk kubectl helm
+
+gcloud auth login
+gcloud auth application-default login
+
+export GCP_PROJECT=<your-project-id>
+gcloud config set project $GCP_PROJECT
+```
+
+### Step 1. Create GKE cluster
+
+```bash
+# Create GCS bucket for Terraform state
+make tf-bootstrap GCP_PROJECT=$GCP_PROJECT
+
+# Init, plan, apply
+make tf-init GCP_PROJECT=$GCP_PROJECT
+make tf-plan GCP_PROJECT=$GCP_PROJECT
+make tf-apply GCP_PROJECT=$GCP_PROJECT
+
+# Configure kubectl
+make tf-kubeconfig GCP_PROJECT=$GCP_PROJECT
+
+# Verify
+kubectl get nodes
+```
+
+Infrastructure created by Terraform:
+
+| Resource | Details |
+|---|---|
+| VPC | `todo-vpc`, subnet `10.0.0.0/20` |
+| GKE cluster | `todo-cluster`, zonal (`asia-southeast1-b`) |
+| Node pool | `spot-pool`, 1x `e2-medium` Spot VM |
+| Pod CIDR | `10.1.0.0/16` |
+| Service CIDR | `10.2.0.0/20` |
+
+### Step 2. Install NGINX Ingress Controller
+
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+```
+
+Wait for External IP:
+
+```bash
+kubectl -n ingress-nginx get svc ingress-nginx-controller -w
+```
+
+Use this IP for `ingress.host` in `values-gcp.yaml` (e.g. `34.87.120.234.nip.io`).
+
+### Step 3. Create GHCR pull secret
+
+GKE needs credentials to pull images from GitHub Container Registry:
+
+```bash
+kubectl create secret docker-registry ghcr-secret \
+  --docker-server=ghcr.io \
+  --docker-username=<github-user> \
+  --docker-password=<github-pat> \
+  --docker-email=<email>
+```
+
+### Step 4. Deploy with Helm
+
+```bash
+make helm-deploy-gcp
+```
+
+This runs `helm upgrade --install` with `values-gcp.yaml` and automatically sets `image.tag` to the latest commit SHA from the `main` branch.
+
+### Step 5. Verify
+
+```bash
+kubectl get pods
+kubectl get ingress
+curl http://<EXTERNAL-IP>.nip.io/api/v1/healthz
+```
+
+| URL | Service |
+|---|---|
+| `http://<EXTERNAL-IP>.nip.io/web` | Frontend |
+| `http://<EXTERNAL-IP>.nip.io/api` | API |
+| `http://<EXTERNAL-IP>.nip.io/api/docs` | Swagger UI |
+
+### Update application
+
+After pushing new code to `main` and CI builds new images:
+
+```bash
+make helm-deploy-gcp
+```
+
+The tag is resolved automatically from the `main` branch HEAD.
+
+### GCP Makefile targets
+
+| Target | Description |
+|---|---|
+| `make tf-bootstrap` | Create GCS bucket for Terraform state |
+| `make tf-init` | Init Terraform with GCS backend |
+| `make tf-plan` | Plan infrastructure changes |
+| `make tf-apply` | Apply infrastructure changes |
+| `make tf-destroy` | Destroy all GCP infrastructure |
+| `make tf-kubeconfig` | Configure kubectl for GKE |
+| `make helm-deploy-gcp` | Deploy app to GKE with latest main commit |
