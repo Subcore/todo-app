@@ -29,7 +29,7 @@ Small To-Do App.md
 todo-api
 
 # Terraform
-terraform/.terraform/
+**/.terraform/
 terraform/**/*.tfstate
 terraform/**/*.tfstate.backup
 terraform/**/*.tfvars
