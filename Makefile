@@ -320,6 +320,17 @@ deploy-vps: build-linux ansible-deploy ## Full VPS deploy: build binary + run An
 	@echo "API: http://178.104.160.66/api"
 	@echo ""
 
+# ─── GCP deploy ───
+
+GCP_TAG := $(shell git rev-parse main)
+
+helm-deploy-gcp: ## Deploy to GKE with latest main commit tag
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) \
+		-f $(HELM_CHART)/values-gcp.yaml \
+		--set image.tag=$(GCP_TAG) \
+		--set web.image.tag=$(GCP_TAG) \
+		--wait --timeout 120s
+
 # ─── Terraform GCP ───
 
 GCP_PROJECT ?= my-gcp-project-id
