@@ -25,20 +25,10 @@ data:
       host: 34.87.120.234.nip.io
 
     db:
-      host: todo-postgresql
+      host: postgresql
       port: "5432"
       name: todo_db
       user: postgres
       password: "REDACTED_PASSWORD"
       sslmode: disable
 
-    postgresql:
-      auth:
-        username: postgres
-        password: "REDACTED_PASSWORD"
-        postgresPassword: "REDACTED_PASSWORD"
-        database: todo_db
-      primary:
-        persistence:
-          enabled: true
-          size: 10Gi
