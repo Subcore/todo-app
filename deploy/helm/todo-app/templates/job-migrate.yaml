@@ -15,6 +15,10 @@ spec:
         {{- include "todo-app.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: migrate
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       restartPolicy: OnFailure
       initContainers:
         - name: copy-migrations
