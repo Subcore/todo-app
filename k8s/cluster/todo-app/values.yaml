@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-app-values
+  namespace: todo-app
+data:
+  values.yaml: |
+    image:
+      repository: ghcr.io/subcore/todo-api
+      tag: "95f3bd3699ca47d3347684bceee0db870d2f5afc"
+      pullPolicy: IfNotPresent
+
+    imagePullSecrets:
+      - name: ghcr-secret
+
+    web:
+      image:
+        repository: ghcr.io/subcore/todo-web
+        tag: "23e0f1cc76426f6e7a144a3910bdd87bebf5a70a"
+        pullPolicy: IfNotPresent
+
+    ingress:
+      enabled: true
+      className: nginx
+      host: 34.87.120.234.nip.io
+
+    db:
+      host: todo-postgresql
+      port: "5432"
+      name: todo_db
+      user: postgres
+      password: "TodoGCP2026!"
+      sslmode: disable
+
+    postgresql:
+      auth:
+        username: postgres
+        password: "TodoGCP2026!"
+        postgresPassword: "TodoGCP2026!"
+        database: todo_db
+      primary:
+        persistence:
+          enabled: true
+          size: 10Gi
