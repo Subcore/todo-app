@@ -65,7 +65,7 @@ spec:
         namespace: flux-system
   values:
     image:
-      tag: "main-20260416T095105-0220d87" # {"$imagepolicy": "flux-system:todo-api:tag"}
+      tag: "main-20260416T100147-dac9f91" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
         tag: "main-20260416T095105-0220d87" # {"$imagepolicy": "flux-system:todo-web:tag"}
