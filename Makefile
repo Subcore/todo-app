@@ -354,4 +354,4 @@ tf-destroy: ## Destroy all GCP infrastructure
 	cd terraform && terraform destroy
 
 tf-kubeconfig: ## Configure kubectl for GKE
-	gcloud container clusters get-credentials todo-cluster --region asia-southeast1 --project $(GCP_PROJECT)
+	gcloud container clusters get-credentials todo-cluster --zone asia-southeast1-b --project $(GCP_PROJECT)

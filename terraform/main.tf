@@ -40,20 +40,21 @@ module "gke" {
   project_id = var.project_id
   name       = "todo-cluster"
   region     = var.region
+  zones      = [var.zone]
 
   network           = module.vpc.network_name
   subnetwork        = module.vpc.subnets_names[0]
   ip_range_pods     = "pods"
   ip_range_services = "services"
 
-  regional                   = true
+  regional                   = false
   remove_default_node_pool   = true
   deletion_protection        = true
 
   node_pools = [
     {
       name         = "spot-pool"
-      machine_type = "e2-standard-4"
+      machine_type = "e2-medium"
       node_count   = 1
       spot         = true
       disk_size_gb = 50
@@ -63,7 +64,7 @@ module "gke" {
     },
     {
       name         = "on-demand-pool"
-      machine_type = "e2-medium"
+      machine_type = "e2-small"
       node_count   = 1
       spot         = false
       disk_size_gb = 50
