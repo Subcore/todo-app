@@ -48,3 +48,35 @@ resource "flux_bootstrap_git" "this" {
     "image-automation-controller"
   ]
 }
+
+resource "kubernetes_namespace" "todo_app" {
+  depends_on = [module.gke]
+
+  metadata {
+    name = "todo-app"
+  }
+}
+
+resource "kubernetes_secret" "ghcr" {
+  for_each   = toset(["todo-app", "flux-system"])
+  depends_on = [kubernetes_namespace.todo_app, flux_bootstrap_git.this]
+
+  metadata {
+    name      = "ghcr-secret"
+    namespace = each.value
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        "ghcr.io" = {
+          username = var.github_owner
+          password = var.github_token
+          auth     = base64encode("${var.github_owner}:${var.github_token}")
+        }
+      }
+    })
+  }
+}
