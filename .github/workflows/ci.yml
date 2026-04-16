@@ -123,8 +123,13 @@ jobs:
       - name: Set image tags
         id: meta
         run: |
-          echo "api=ghcr.io/${OWNER,,}/todo-api:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          echo "web=ghcr.io/${OWNER,,}/todo-web:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          SHORT_SHA=${GITHUB_SHA::7}
+          TAG="main-${TIMESTAMP}-${SHORT_SHA}"
+          OWNER_LC=${OWNER,,}
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "api=ghcr.io/${OWNER_LC}/todo-api:${TAG}" >> "$GITHUB_OUTPUT"
+          echo "web=ghcr.io/${OWNER_LC}/todo-web:${TAG}" >> "$GITHUB_OUTPUT"
         env:
           OWNER: ${{ github.repository_owner }}
 
