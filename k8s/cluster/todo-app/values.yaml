@@ -25,7 +25,7 @@ data:
       host: 34.87.120.234.nip.io
 
     db:
-      host: postgresql
+      host: todo-postgresql
       port: "5432"
       name: todo_db
       user: postgres
