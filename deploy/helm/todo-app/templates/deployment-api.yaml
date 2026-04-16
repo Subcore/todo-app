@@ -33,8 +33,8 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for PostgreSQL at {{ .Values.db.host }}:{{ .Values.db.port }}..."
-              until nc -z {{ .Values.db.host }} {{ .Values.db.port }}; do
+              echo "Waiting for PostgreSQL at {{ include "todo-app.dbHost" . }}:{{ .Values.db.port }}..."
+              until nc -z {{ include "todo-app.dbHost" . }} {{ .Values.db.port }}; do
                 echo "PostgreSQL is not ready yet, retrying in 2s..."
                 sleep 2
               done
