@@ -54,7 +54,7 @@ module "gke" {
   node_pools = [
     {
       name         = "spot-pool"
-      machine_type = "e2-medium"
+      machine_type = "e2-standard-4"
       node_count   = 1
       spot         = true
       disk_size_gb = 30
