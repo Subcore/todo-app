@@ -65,10 +65,10 @@ spec:
         namespace: flux-system
   values:
     image:
-      tag: "main-20260416T084449-a076fd2" # {"$imagepolicy": "flux-system:todo-api:tag"}
+      tag: "main-20260416T095105-0220d87" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
-        tag: "main-20260416T084449-a076fd2" # {"$imagepolicy": "flux-system:todo-web:tag"}
+        tag: "main-20260416T095105-0220d87" # {"$imagepolicy": "flux-system:todo-web:tag"}
   valuesFrom:
     - kind: ConfigMap
       name: todo-app-values
