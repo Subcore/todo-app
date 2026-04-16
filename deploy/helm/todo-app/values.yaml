@@ -36,7 +36,23 @@ ingress:
   className: nginx
   host: todo.local
 
+# -- встроенный PostgreSQL (Bitnami subchart)
+# Если enabled: true — Helm поставит PostgreSQL сам
+# Если enabled: false — используй db.host для внешней БД
+postgresql:
+  enabled: true
+  auth:
+    username: postgres
+    password: postgres
+    postgresPassword: postgres
+    database: todo_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+
 db:
+  # host переопределяется автоматически когда postgresql.enabled=true
   host: todo-postgresql
   port: "5432"
   name: todo_db
