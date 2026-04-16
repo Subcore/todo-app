@@ -49,7 +49,7 @@ module "gke" {
 
   regional                   = false
   remove_default_node_pool   = true
-  deletion_protection        = true
+  deletion_protection        = false
 
   node_pools = [
     {
@@ -57,16 +57,6 @@ module "gke" {
       machine_type = "e2-medium"
       node_count   = 1
       spot         = true
-      disk_size_gb = 50
-      disk_type    = "pd-standard"
-      auto_repair  = true
-      auto_upgrade = true
-    },
-    {
-      name         = "on-demand-pool"
-      machine_type = "e2-small"
-      node_count   = 1
-      spot         = false
       disk_size_gb = 50
       disk_type    = "pd-standard"
       auto_repair  = true
