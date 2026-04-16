@@ -17,3 +17,19 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "github_owner" {
+  description = "GitHub repository owner (user or org)"
+  type        = string
+}
+
+variable "github_repository" {
+  description = "GitHub repository name for FluxCD"
+  type        = string
+}
+
+variable "github_token" {
+  description = "GitHub personal access token (repo scope) for FluxCD"
+  type        = string
+  sensitive   = true
+}

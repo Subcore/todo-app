@@ -56,6 +56,8 @@ module "gke" {
       name         = "spot-pool"
       machine_type = "e2-medium"
       node_count   = 1
+      min_count    = 1
+      max_count    = 3
       spot         = true
       disk_size_gb = 50
       disk_type    = "pd-standard"
