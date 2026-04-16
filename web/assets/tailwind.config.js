@@ -5,7 +5,7 @@ tailwind.config = {
                 sans: ['Inter', 'sans-serif'],
             },
             colors: {
-                primary: '#6366f1',
+                primary: '#41d53fff',
                 'primary-light': '#818cf8',
                 accent: '#f43f5e',
                 success: '#10b981',
