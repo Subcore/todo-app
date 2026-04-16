@@ -333,7 +333,7 @@ helm-deploy-gcp: ## Deploy to GKE with latest main commit tag
 
 # ─── Terraform GCP ───
 
-GCP_PROJECT ?= todo-app-v2-vlcv-fluxcd-02
+GCP_PROJECT ?= YOUR_GCP_PROJECT
 
 tf-bootstrap: ## Create GCS bucket for Terraform state
 	cd terraform/bootstrap && terraform init && terraform apply -var="project_id=$(GCP_PROJECT)"

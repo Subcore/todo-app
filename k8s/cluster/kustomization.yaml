@@ -2,7 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - flux-system
-  - ingress-nginx/namespace.yaml
   - ingress-nginx/helmrelease.yaml
   - todo-app/namespace.yaml
   - todo-app/values.yaml

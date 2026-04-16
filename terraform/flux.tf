@@ -97,8 +97,16 @@ resource "kubernetes_secret" "db_credentials" {
   }
 }
 
+resource "kubernetes_namespace" "ingress_nginx" {
+  depends_on = [module.gke]
+
+  metadata {
+    name = "ingress-nginx"
+  }
+}
+
 resource "kubernetes_config_map" "ingress_nginx_values" {
-  depends_on = [flux_bootstrap_git.this]
+  depends_on = [kubernetes_namespace.ingress_nginx, flux_bootstrap_git.this]
 
   metadata {
     name      = "ingress-nginx-values"

@@ -13,6 +13,8 @@ kind: HelmRelease
 metadata:
   name: todo-postgresql
   namespace: todo-app
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   interval: 5m
   chart:
@@ -48,6 +50,7 @@ spec:
   chart:
     spec:
       chart: deploy/helm/todo-app
+      reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
         name: flux-system
