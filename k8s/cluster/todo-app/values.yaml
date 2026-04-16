@@ -7,7 +7,6 @@ data:
   values.yaml: |
     image:
       repository: ghcr.io/subcore/todo-api
-      tag: "latest" # {"$imagepolicy": "flux-system:todo-api:tag"}
       pullPolicy: IfNotPresent
 
     imagePullSecrets:
@@ -16,7 +15,6 @@ data:
     web:
       image:
         repository: ghcr.io/subcore/todo-web
-        tag: "latest" # {"$imagepolicy": "flux-system:todo-web:tag"}
         pullPolicy: IfNotPresent
 
     ingress:
