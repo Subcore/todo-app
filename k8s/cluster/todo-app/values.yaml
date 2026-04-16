@@ -20,7 +20,7 @@ data:
     ingress:
       enabled: true
       className: nginx
-      host: 34.87.120.234.nip.io
+      host: 34.87.115.233.nip.io
 
     db:
       host: todo-postgresql
