@@ -17,6 +17,9 @@ data:
         repository: ghcr.io/subcore/todo-web
         pullPolicy: IfNotPresent
 
+    postgresql:
+      enabled: false
+
     db:
       host: todo-postgresql
       port: "5432"
