@@ -281,7 +281,7 @@
         <div class="glass-container rounded-[24px] p-10 animate-[fadeIn_0.6s_ease-out]">
             <header class="mb-8 text-center">
                 <p class="text-[0.65rem] text-slate-500 font-mono tracking-wider mb-1">build __GIT_SHA__</p>
-                <h1 class="text-[2.2rem] font-bold mb-2 gradient-text">Мои задачи</h1>
+                <h1 class="text-[2.2rem] font-bold mb-2 gradient-text">Мои суперзадачи</h1>
                 <p class="text-slate-400 text-[0.95rem]" x-text="`${currentDate} — ${todos.length} задач`"></p>
             </header>
 
@@ -303,7 +303,8 @@
                         x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                         @click.outside="if (!searchQuery && !dueDateAfter && !dueDateBefore) showSearch = false"
                         class="absolute right-0 top-full mt-2 z-10">
-                        <div class="flex flex-col gap-2 bg-slate-800 border border-white/10 rounded-xl p-3 shadow-xl w-[300px]">
+                        <div
+                            class="flex flex-col gap-2 bg-slate-800 border border-white/10 rounded-xl p-3 shadow-xl w-[300px]">
                             <div class="relative">
                                 <i data-lucide="search"
                                     class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500"></i>
@@ -330,7 +331,8 @@
                                 </div>
                                 <button x-show="dueDateAfter || dueDateBefore"
                                     @click="dueDateAfter = ''; dueDateBefore = ''; fetchTodos()"
-                                    class="text-slate-500 hover:text-white p-0.5 rounded-lg transition-all flex-shrink-0" title="Сбросить">
+                                    class="text-slate-500 hover:text-white p-0.5 rounded-lg transition-all flex-shrink-0"
+                                    title="Сбросить">
                                     <i data-lucide="x" class="w-3 h-3"></i>
                                 </button>
                             </div>
@@ -388,15 +390,15 @@
 
                         <!-- Calendar icon for custom date -->
                         <div class="relative inline-flex items-center">
-                            <div
-                                class="inline-flex items-center gap-1.5 rounded-full border transition-all pointer-events-none"
+                            <div class="inline-flex items-center gap-1.5 rounded-full border transition-all pointer-events-none"
                                 :class="[
                                     newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'bg-primary/15 border-primary/30 text-primary font-medium' : 'border-white/10 text-slate-400',
                                     newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? 'px-3 py-1.5' : 'w-8 h-8 justify-center'
                                 ]"
                                 :title="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра' ? newDueDateLabel : 'Выбрать дату'">
                                 <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                                <span x-show="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра'"
+                                <span
+                                    x-show="newDueDateLabel && newDueDateLabel !== 'Сегодня' && newDueDateLabel !== 'Завтра'"
                                     x-text="newDueDateLabel" class="text-xs"></span>
                             </div>
                             <input type="date" @change="setCustomDate($event)" :value="newDueDate || getTodayDate()"
