@@ -5,7 +5,7 @@ provider "google" {
 
 module "vpc" {
   source  = "terraform-google-modules/network/google"
-  version = "~> 9.0"
+  version = "~> 12.0"
 
   project_id   = var.project_id
   network_name = "todo-vpc"
@@ -35,7 +35,7 @@ module "vpc" {
 
 module "gke" {
   source  = "terraform-google-modules/kubernetes-engine/google"
-  version = "~> 35.0"
+  version = "~> 36.0"
 
   project_id = var.project_id
   name       = "todo-cluster"
