@@ -1,0 +1,77 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: todo-api
+  namespace: flux-system
+spec:
+  image: ghcr.io/subcore/todo-api
+  interval: 5m
+  secretRef:
+    name: ghcr-secret
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: todo-web
+  namespace: flux-system
+spec:
+  image: ghcr.io/subcore/todo-web
+  interval: 5m
+  secretRef:
+    name: ghcr-secret
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: todo-api
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: todo-api
+  filterTags:
+    pattern: '^main-(?P<ts>\d{8}T\d{6})-[a-f0-9]{7}$'
+    extract: '$ts'
+  policy:
+    alphabetical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: todo-web
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: todo-web
+  filterTags:
+    pattern: '^main-(?P<ts>\d{8}T\d{6})-[a-f0-9]{7}$'
+    extract: '$ts'
+  policy:
+    alphabetical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageUpdateAutomation
+metadata:
+  name: todo-app
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: "chore: update images to {{range .Changed.Changes}}{{print .NewValue}} {{end}}"
+    push:
+      branch: main
+  update:
+    path: ./k8s/cluster
+    strategy: Setters

@@ -51,20 +51,3 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
-
-postgresql:
-  auth:
-    username: "postgres"
-    password: postgres
-    postgresPassword: postgres
-    database: todo_db
-  primary:
-    persistence:
-      enabled: false
-    resources:
-      limits:
-        cpu: 200m
-        memory: 256Mi
-      requests:
-        cpu: 100m
-        memory: 128Mi

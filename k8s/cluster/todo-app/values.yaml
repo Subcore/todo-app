@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-app-values
+  namespace: todo-app
+data:
+  values.yaml: |
+    image:
+      repository: ghcr.io/subcore/todo-api
+      tag: "latest" # {"$imagepolicy": "flux-system:todo-api:tag"}
+      pullPolicy: IfNotPresent
+
+    imagePullSecrets:
+      - name: ghcr-secret
+
+    web:
+      image:
+        repository: ghcr.io/subcore/todo-web
+        tag: "latest" # {"$imagepolicy": "flux-system:todo-web:tag"}
+        pullPolicy: IfNotPresent
+
+    ingress:
+      enabled: true
+      className: nginx
+      host: 34.87.120.234.nip.io
+
+    db:
+      host: todo-postgresql
+      port: "5432"
+      name: todo_db
+      user: postgres
+      password: "REDACTED_PASSWORD"
+      sslmode: disable
