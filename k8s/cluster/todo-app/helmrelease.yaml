@@ -24,7 +24,7 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: postgresql
+  name: todo-postgresql
   namespace: todo-app
 spec:
   interval: 5m
@@ -55,7 +55,7 @@ metadata:
 spec:
   interval: 5m
   dependsOn:
-    - name: postgresql
+    - name: todo-postgresql
   chart:
     spec:
       chart: deploy/helm/todo-app
