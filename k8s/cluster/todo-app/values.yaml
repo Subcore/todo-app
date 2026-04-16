@@ -17,15 +17,9 @@ data:
         repository: ghcr.io/subcore/todo-web
         pullPolicy: IfNotPresent
 
-    ingress:
-      enabled: true
-      className: nginx
-      host: 34.87.115.233.nip.io
-
     db:
       host: todo-postgresql
       port: "5432"
       name: todo_db
       user: postgres
-      password: "REDACTED_PASSWORD"
       sslmode: disable

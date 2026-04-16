@@ -40,16 +40,15 @@ module "gke" {
   project_id = var.project_id
   name       = "todo-cluster"
   region     = var.region
-  zones      = [var.zone]
 
   network           = module.vpc.network_name
   subnetwork        = module.vpc.subnets_names[0]
   ip_range_pods     = "pods"
   ip_range_services = "services"
 
-  regional                   = false
+  regional                   = true
   remove_default_node_pool   = true
-  deletion_protection        = false
+  deletion_protection        = true
 
   node_pools = [
     {
@@ -57,7 +56,17 @@ module "gke" {
       machine_type = "e2-standard-4"
       node_count   = 1
       spot         = true
-      disk_size_gb = 30
+      disk_size_gb = 50
+      disk_type    = "pd-standard"
+      auto_repair  = true
+      auto_upgrade = true
+    },
+    {
+      name         = "on-demand-pool"
+      machine_type = "e2-medium"
+      node_count   = 1
+      spot         = false
+      disk_size_gb = 50
       disk_type    = "pd-standard"
       auto_repair  = true
       auto_upgrade = true
@@ -67,4 +76,10 @@ module "gke" {
   node_pools_oauth_scopes = {
     all = ["https://www.googleapis.com/auth/cloud-platform"]
   }
+}
+
+resource "google_compute_address" "ingress" {
+  name    = "todo-ingress-ip"
+  region  = var.region
+  project = var.project_id
 }

@@ -21,6 +21,18 @@ spec:
       {{- end }}
       restartPolicy: OnFailure
       initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL at {{ include "todo-app.dbHost" . }}:{{ .Values.db.port }}..."
+              until nc -z {{ include "todo-app.dbHost" . }} {{ .Values.db.port }}; do
+                echo "PostgreSQL is not ready yet, retrying in 2s..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
         - name: copy-migrations
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["cp", "-r", "/app/migrations/.", "/migrations/"]

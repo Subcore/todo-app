@@ -80,3 +80,57 @@ resource "kubernetes_secret" "ghcr" {
     })
   }
 }
+
+resource "kubernetes_secret" "db_credentials" {
+  depends_on = [kubernetes_namespace.todo_app]
+
+  metadata {
+    name      = "todo-db-credentials"
+    namespace = "todo-app"
+  }
+
+  type = "Opaque"
+
+  data = {
+    password          = var.db_password
+    postgres-password = var.db_password
+  }
+}
+
+resource "kubernetes_config_map" "ingress_nginx_values" {
+  depends_on = [flux_bootstrap_git.this]
+
+  metadata {
+    name      = "ingress-nginx-values"
+    namespace = "ingress-nginx"
+  }
+
+  data = {
+    "values.yaml" = yamlencode({
+      controller = {
+        service = {
+          loadBalancerIP = google_compute_address.ingress.address
+        }
+      }
+    })
+  }
+}
+
+resource "kubernetes_config_map" "todo_app_ingress" {
+  depends_on = [kubernetes_namespace.todo_app]
+
+  metadata {
+    name      = "todo-app-ingress-values"
+    namespace = "todo-app"
+  }
+
+  data = {
+    "values.yaml" = yamlencode({
+      ingress = {
+        enabled   = true
+        className = "nginx"
+        host      = "${google_compute_address.ingress.address}.nip.io"
+      }
+    })
+  }
+}

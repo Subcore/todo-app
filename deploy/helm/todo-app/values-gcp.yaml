@@ -15,12 +15,16 @@ web:
 ingress:
   enabled: true
   className: nginx
-  host: 34.87.120.234.nip.io
+  # host is set dynamically via Terraform-managed ConfigMap in Flux deployments.
+  # For manual helm-deploy-gcp, override with: --set ingress.host=<IP>.nip.io
+  host: todo.local
 
 db:
   host: todo-postgresql
   port: "5432"
   name: todo_db
   user: postgres
-  password: "REDACTED_PASSWORD"
+  # Password supplied via TF_VAR_db_password -> Kubernetes Secret todo-db-credentials.
+  # For manual deploys, override with: --set db.password=<password>
+  password: postgres
   sslmode: disable

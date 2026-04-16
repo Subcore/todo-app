@@ -333,7 +333,7 @@ helm-deploy-gcp: ## Deploy to GKE with latest main commit tag
 
 # ─── Terraform GCP ───
 
-GCP_PROJECT ?= my-gcp-project-id
+GCP_PROJECT ?= todo-app-v2-vlcv-fluxcd-02
 
 tf-bootstrap: ## Create GCS bucket for Terraform state
 	cd terraform/bootstrap && terraform init && terraform apply -var="project_id=$(GCP_PROJECT)"
@@ -354,4 +354,4 @@ tf-destroy: ## Destroy all GCP infrastructure
 	cd terraform && terraform destroy
 
 tf-kubeconfig: ## Configure kubectl for GKE
-	gcloud container clusters get-credentials todo-cluster --zone asia-southeast1-b --project $(GCP_PROJECT)
+	gcloud container clusters get-credentials todo-cluster --region asia-southeast1 --project $(GCP_PROJECT)

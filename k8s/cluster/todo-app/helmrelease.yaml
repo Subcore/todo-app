@@ -1,17 +1,4 @@
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: todo-app
-  namespace: flux-system
-spec:
-  interval: 1m
-  url: ssh://git@github.com/Subcore/todo-app-v2.git
-  ref:
-    branch: main
-  secretRef:
-    name: flux-system
----
-apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
   name: bitnami
@@ -39,8 +26,10 @@ spec:
   values:
     auth:
       username: postgres
-      password: "REDACTED_PASSWORD"
-      postgresPassword: "REDACTED_PASSWORD"
+      existingSecret: todo-db-credentials
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: password
       database: todo_db
     primary:
       persistence:
@@ -61,9 +50,10 @@ spec:
       chart: deploy/helm/todo-app
       sourceRef:
         kind: GitRepository
-        name: todo-app
+        name: flux-system
         namespace: flux-system
   values:
+    # Image tags managed by Flux image automation (inline for setter markers)
     image:
       tag: "main-20260416T101111-a3db33c" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
@@ -72,4 +62,12 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: todo-app-values
+      optional: false
+    - kind: ConfigMap
+      name: todo-app-ingress-values
+      optional: false
+    - kind: Secret
+      name: todo-db-credentials
+      valuesKey: password
+      targetPath: db.password
       optional: false

@@ -30,3 +30,7 @@ spec:
         name: nginx
         enabled: true
         default: false
+  valuesFrom:
+    - kind: ConfigMap
+      name: ingress-nginx-values
+      optional: true
