@@ -11,3 +11,9 @@ variable "zone" {
   type    = string
   default = "asia-southeast1-b"
 }
+
+variable "db_password" {
+  description = "PostgreSQL password for the todo-app database"
+  type        = string
+  sensitive   = true
+}

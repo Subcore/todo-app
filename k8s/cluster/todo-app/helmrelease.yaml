@@ -39,9 +39,11 @@ spec:
   values:
     auth:
       username: postgres
-      password: "TodoGCP2026!"
-      postgresPassword: "TodoGCP2026!"
       database: todo_db
+      existingSecret: todo-db-credentials
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: postgres-password
     primary:
       persistence:
         enabled: true

@@ -22,10 +22,14 @@ data:
       className: nginx
       host: 34.87.115.233.nip.io
 
+    postgresql:
+      enabled: false
+
+    existingSecret: todo-db-credentials
+
     db:
       host: todo-postgresql
       port: "5432"
       name: todo_db
       user: postgres
-      password: "TodoGCP2026!"
       sslmode: disable

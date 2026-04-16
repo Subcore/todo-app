@@ -40,7 +40,7 @@ spec:
             - configMapRef:
                 name: {{ include "todo-app.fullname" . }}-config
             - secretRef:
-                name: {{ include "todo-app.fullname" . }}-secret
+                name: {{ .Values.existingSecret | default (printf "%s-secret" (include "todo-app.fullname" .)) }}
           volumeMounts:
             - name: migrations
               mountPath: /migrations

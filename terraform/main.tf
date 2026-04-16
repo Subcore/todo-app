@@ -49,14 +49,14 @@ module "gke" {
 
   regional                   = false
   remove_default_node_pool   = true
-  deletion_protection        = false
+  deletion_protection        = true
 
   node_pools = [
     {
-      name         = "spot-pool"
+      name         = "default-pool"
       machine_type = "e2-standard-4"
       node_count   = 1
-      spot         = true
+      spot         = false
       disk_size_gb = 30
       disk_type    = "pd-standard"
       auto_repair  = true

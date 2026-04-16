@@ -57,6 +57,21 @@ resource "kubernetes_namespace" "todo_app" {
   }
 }
 
+resource "kubernetes_secret" "db_credentials" {
+  depends_on = [kubernetes_namespace.todo_app]
+
+  metadata {
+    name      = "todo-db-credentials"
+    namespace = "todo-app"
+  }
+
+  data = {
+    "DB_USER"           = "postgres"
+    "DB_PASSWORD"       = var.db_password
+    "postgres-password" = var.db_password
+  }
+}
+
 resource "kubernetes_secret" "ghcr" {
   for_each   = toset(["todo-app", "flux-system"])
   depends_on = [kubernetes_namespace.todo_app, flux_bootstrap_git.this]

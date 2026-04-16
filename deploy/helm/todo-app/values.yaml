@@ -31,6 +31,10 @@ web:
 
 enableSwagger: true
 
+# -- Use pre-existing secret for DB credentials instead of generating one
+# When set, templates/secret.yaml is skipped and this secret is used in envFrom
+existingSecret: ""
+
 ingress:
   enabled: true
   className: nginx

@@ -17,10 +17,11 @@ ingress:
   className: nginx
   host: 34.87.120.234.nip.io
 
+existingSecret: todo-db-credentials
+
 db:
   host: todo-postgresql
   port: "5432"
   name: todo_db
   user: postgres
-  password: "TodoGCP2026!"
   sslmode: disable
