@@ -68,7 +68,7 @@ spec:
       tag: "main-20260417T121602-e7fcc3c" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
-        tag: "main-20260417T104632-192f7e1" # {"$imagepolicy": "flux-system:todo-web:tag"}
+        tag: "main-20260417T121602-e7fcc3c" # {"$imagepolicy": "flux-system:todo-web:tag"}
   valuesFrom:
     - kind: ConfigMap
       name: todo-app-values
