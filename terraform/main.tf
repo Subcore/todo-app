@@ -10,10 +10,15 @@ module "vpc" {
   project_id   = var.project_id
   network_name = "todo-vpc"
 
+
+  # Subnet CIDR allocation:
+  #   10.10.0.0/20  — GKE nodes         (4094 IPs, room to grow to /16)
+  #   10.20.0.0/16  — GKE pods          (65k IPs, supports ~256 nodes with /24 per node)
+  #   10.30.0.0/20  — GKE services      (4094 ClusterIPs)
   subnets = [
     {
       subnet_name           = "gke-subnet"
-      subnet_ip             = "10.0.0.0/20"
+      subnet_ip             = "10.10.0.0/20"
       subnet_region         = var.region
       subnet_private_access = "true"
     }
@@ -23,11 +28,11 @@ module "vpc" {
     gke-subnet = [
       {
         range_name    = "pods"
-        ip_cidr_range = "10.1.0.0/16"
+        ip_cidr_range = "10.20.0.0/16"
       },
       {
         range_name    = "services"
-        ip_cidr_range = "10.2.0.0/20"
+        ip_cidr_range = "10.30.0.0/20"
       }
     ]
   }
@@ -47,17 +52,17 @@ module "gke" {
   ip_range_pods     = "pods"
   ip_range_services = "services"
 
-  regional                   = false
-  remove_default_node_pool   = true
-  deletion_protection        = false
+  regional                 = false
+  remove_default_node_pool = true
+  deletion_protection      = false
 
   node_pools = [
     {
       name         = "spot-pool"
-      machine_type = "e2-medium"
+      machine_type = "e2-standard-8"
       node_count   = 1
       min_count    = 1
-      max_count    = 3
+      max_count    = 1
       spot         = true
       disk_size_gb = 50
       disk_type    = "pd-standard"
