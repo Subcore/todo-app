@@ -17,12 +17,7 @@ data:
         repository: ghcr.io/subcore/todo-web
         pullPolicy: IfNotPresent
       nodeSelector:
-        workload: web
-      tolerations:
-        - key: workload
-          operator: Equal
-          value: web
-          effect: NoSchedule
+        node-pool: app
 
     postgresql:
       enabled: false
@@ -36,9 +31,4 @@ data:
 
     api:
       nodeSelector:
-        workload: api
-      tolerations:
-        - key: workload
-          operator: Equal
-          value: api
-          effect: NoSchedule
+        node-pool: app

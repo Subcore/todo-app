@@ -82,23 +82,10 @@ module "gke" {
       auto_upgrade = true
     },
     {
-      name         = "api-pool"
-      machine_type = "e2-medium"
-      node_count   = 1
-      min_count    = 1
-      max_count    = 1
-      spot         = true
-      disk_size_gb = 30
-      disk_type    = "pd-standard"
-      auto_repair  = true
-      auto_upgrade = true
-    },
-    {
-      name         = "web-pool"
-      machine_type = "e2-small"
-      node_count   = 1
-      min_count    = 1
-      max_count    = 1
+      name         = "app-pool"
+      machine_type = "e2-standard-4"
+      min_count    = 2
+      max_count    = 3
       spot         = true
       disk_size_gb = 30
       disk_type    = "pd-standard"
@@ -115,35 +102,19 @@ module "gke" {
     db-pool = {
       workload = "database"
     }
-    api-pool = {
-      workload = "api"
-    }
-    web-pool = {
-      workload = "web"
+    app-pool = {
+      node-pool = "app"
     }
   }
 
   node_pools_taints = {
     all       = []
     spot-pool = []
+    app-pool  = []
     db-pool = [
       {
         key    = "workload"
         value  = "database"
-        effect = "NO_SCHEDULE"
-      }
-    ]
-    api-pool = [
-      {
-        key    = "workload"
-        value  = "api"
-        effect = "NO_SCHEDULE"
-      }
-    ]
-    web-pool = [
-      {
-        key    = "workload"
-        value  = "web"
         effect = "NO_SCHEDULE"
       }
     ]
