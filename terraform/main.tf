@@ -58,13 +58,12 @@ module "gke" {
 
   node_pools = [
     {
-      name         = "spot-pool"
-      machine_type = "e2-standard-8"
-      node_count   = 1
+      name         = "system-pool"
+      machine_type = "e2-standard-2"
       min_count    = 1
       max_count    = 1
       spot         = true
-      disk_size_gb = 50
+      disk_size_gb = 30
       disk_type    = "pd-standard"
       auto_repair  = true
       auto_upgrade = true
@@ -84,8 +83,8 @@ module "gke" {
     {
       name         = "app-pool"
       machine_type = "e2-standard-4"
-      min_count    = 2
-      max_count    = 3
+      min_count    = 1
+      max_count    = 2
       spot         = true
       disk_size_gb = 30
       disk_type    = "pd-standard"
@@ -96,8 +95,8 @@ module "gke" {
 
   node_pools_labels = {
     all = {}
-    spot-pool = {
-      workload = "apps"
+    system-pool = {
+      node-pool = "system"
     }
     db-pool = {
       workload = "database"
@@ -108,9 +107,9 @@ module "gke" {
   }
 
   node_pools_taints = {
-    all       = []
-    spot-pool = []
-    app-pool  = []
+    all         = []
+    system-pool = []
+    app-pool    = []
     db-pool = [
       {
         key    = "workload"

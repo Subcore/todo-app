@@ -3,3 +3,16 @@ kind: Kustomization
 resources:
 - gotk-components.yaml
 - gotk-sync.yaml
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: _
+      spec:
+        template:
+          spec:
+            nodeSelector:
+              node-pool: system

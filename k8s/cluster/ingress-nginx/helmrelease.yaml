@@ -31,12 +31,7 @@ spec:
         enabled: true
         default: false
       nodeSelector:
-        workload: web
-      tolerations:
-        - key: workload
-          operator: Equal
-          value: web
-          effect: NoSchedule
+        node-pool: system
   valuesFrom:
     - kind: ConfigMap
       name: ingress-nginx-values
