@@ -68,8 +68,42 @@ module "gke" {
       disk_type    = "pd-standard"
       auto_repair  = true
       auto_upgrade = true
+    },
+    {
+      name         = "db-pool"
+      machine_type = "e2-small"
+      node_count   = 1
+      min_count    = 1
+      max_count    = 1
+      spot         = true
+      disk_size_gb = 30
+      disk_type    = "pd-standard"
+      auto_repair  = true
+      auto_upgrade = true
     }
   ]
+
+  node_pools_labels = {
+    all = {}
+    spot-pool = {
+      workload = "apps"
+    }
+    db-pool = {
+      workload = "database"
+    }
+  }
+
+  node_pools_taints = {
+    all       = []
+    spot-pool = []
+    db-pool = [
+      {
+        key    = "workload"
+        value  = "database"
+        effect = "NO_SCHEDULE"
+      }
+    ]
+  }
 
   node_pools_oauth_scopes = {
     all = ["https://www.googleapis.com/auth/cloud-platform"]
