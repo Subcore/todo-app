@@ -26,3 +26,12 @@ data:
       name: todo_db
       user: postgres
       sslmode: disable
+
+    api:
+      nodeSelector:
+        workload: api
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: api
+          effect: NoSchedule
