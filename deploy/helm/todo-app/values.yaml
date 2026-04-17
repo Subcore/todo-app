@@ -22,6 +22,9 @@ web:
     tag: latest
     pullPolicy: Always
   replicaCount: 1
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
   service:
     type: ClusterIP
     port: 80

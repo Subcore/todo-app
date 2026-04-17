@@ -92,6 +92,18 @@ module "gke" {
       disk_type    = "pd-standard"
       auto_repair  = true
       auto_upgrade = true
+    },
+    {
+      name         = "web-pool"
+      machine_type = "e2-small"
+      node_count   = 1
+      min_count    = 1
+      max_count    = 1
+      spot         = true
+      disk_size_gb = 30
+      disk_type    = "pd-standard"
+      auto_repair  = true
+      auto_upgrade = true
     }
   ]
 
@@ -105,6 +117,9 @@ module "gke" {
     }
     api-pool = {
       workload = "api"
+    }
+    web-pool = {
+      workload = "web"
     }
   }
 
@@ -122,6 +137,13 @@ module "gke" {
       {
         key    = "workload"
         value  = "api"
+        effect = "NO_SCHEDULE"
+      }
+    ]
+    web-pool = [
+      {
+        key    = "workload"
+        value  = "web"
         effect = "NO_SCHEDULE"
       }
     ]
