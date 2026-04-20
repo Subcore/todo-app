@@ -130,6 +130,7 @@ jobs:
           TAG="main-${TIMESTAMP}-${SHORT_SHA}"
           OWNER_LC=${OWNER,,}
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           echo "api=ghcr.io/${OWNER_LC}/todo-api:${TAG}" >> "$GITHUB_OUTPUT"
           echo "web=ghcr.io/${OWNER_LC}/todo-web:${TAG}" >> "$GITHUB_OUTPUT"
         env:
@@ -151,5 +152,7 @@ jobs:
           file: Dockerfile.web
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.web }}
+          build-args: |
+            GIT_SHA=${{ steps.meta.outputs.short_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
