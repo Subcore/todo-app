@@ -65,10 +65,10 @@ spec:
   values:
     # Image tags managed by Flux image automation (inline for setter markers)
     image:
-      tag: "main-20260417T170813-77e7a70" # {"$imagepolicy": "flux-system:todo-api:tag"}
+      tag: "main-20260420T074855-ea77018" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
-        tag: "main-20260417T170813-77e7a70" # {"$imagepolicy": "flux-system:todo-web:tag"}
+        tag: "main-20260420T074855-ea77018" # {"$imagepolicy": "flux-system:todo-web:tag"}
   valuesFrom:
     - kind: ConfigMap
       name: todo-app-values
