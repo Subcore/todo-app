@@ -22,7 +22,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	require.NoError(t, err, "failed to connect to test database")
 
-	// Проверяем что миграции были применены — таблица todos должна существовать
+	// Confirm migrations have been applied — the todos table must exist.
 	var exists bool
 	err = db.Raw(`SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'todos')`).Scan(&exists).Error
 	require.NoError(t, err, "failed to check table existence")

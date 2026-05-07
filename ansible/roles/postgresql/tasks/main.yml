@@ -1,27 +1,27 @@
 ---
-# Роль: установка PostgreSQL и создание БД + пользователя
-# Источник параметров: docker-compose.yaml (db сервис)
+# Role: install PostgreSQL and create the DB + user.
+# Source of parameters: docker-compose.yaml (db service)
 #   POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
-# 1. Ставим PostgreSQL и Python-адаптер (нужен для Ansible-модуля postgresql_*)
+# 1. Install PostgreSQL and the Python adapter (required by the Ansible postgresql_* modules).
 - name: Install PostgreSQL and dependencies
   apt:
     name:
       - postgresql
       - postgresql-contrib
-      - python3-psycopg2   # Ansible использует этот пакет для работы с PostgreSQL
+      - python3-psycopg2   # used by Ansible to talk to PostgreSQL
     state: present
     update_cache: yes
 
-# 2. Убеждаемся что PostgreSQL запущен
+# 2. Make sure PostgreSQL is running.
 - name: Ensure PostgreSQL is running
   service:
     name: postgresql
     state: started
     enabled: yes
 
-# 3. Создаём пользователя БД
-# Аналог POSTGRES_USER из docker-compose.yaml
+# 3. Create the DB user.
+# Counterpart of POSTGRES_USER from docker-compose.yaml.
 - name: Create database user
   become_user: postgres
   postgresql_user:
@@ -29,17 +29,17 @@
     password: "{{ db_password }}"
     role_attr_flags: CREATEDB
 
-# 4. Создаём базу данных
-# Аналог POSTGRES_DB из docker-compose.yaml
+# 4. Create the database.
+# Counterpart of POSTGRES_DB from docker-compose.yaml.
 - name: Create database
   become_user: postgres
   postgresql_db:
     name: "{{ db_name }}"
     owner: "{{ db_user }}"
 
-# 5. Разрешаем подключение по паролю с localhost
-# По умолчанию PostgreSQL на Ubuntu использует peer-аутентификацию,
-# а нашему backend нужно подключаться по паролю (как в Docker)
+# 5. Allow password authentication for local connections.
+# By default PostgreSQL on Ubuntu uses peer authentication,
+# but our backend needs to authenticate by password (same as in Docker).
 - name: Allow password authentication for local connections
   lineinfile:
     path: /etc/postgresql/16/main/pg_hba.conf
@@ -47,9 +47,9 @@
     line: 'local   all             all                                     md5'
   notify: restart postgresql
 
-# 6. Даём юзеру todo все права на таблицы в БД todo_db
-# Нужно потому что миграции запускаются от postgres,
-# а приложение подключается как todo
+# 6. Grant the todo user all privileges on tables in todo_db.
+# Required because migrations run as postgres,
+# but the application connects as todo.
 - name: Grant all privileges to app user
   become_user: postgres
   postgresql_privs:

@@ -7,19 +7,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// Todo — модель задачи, хранящаяся в таблице todos
+// Todo is the task record stored in the todos table.
 type Todo struct {
-	ID        uint           `gorm:"primaryKey;autoIncrement" json:"id"`          // Уникальный идентификатор
-	Title     string         `gorm:"size:255;not null" json:"title"`              // Заголовок задачи (макс. 255 символов)
-	Completed bool           `gorm:"default:false" json:"completed"`              // Статус выполнения
-	DueDate   *time.Time     `json:"due_date,omitempty" swaggertype:"string" format:"date-time" example:"2023-12-31T23:59:59Z"` // Срок выполнения
-	Tags      pq.StringArray `gorm:"type:text[]" json:"tags" swaggertype:"array,string"`                                        // Теги задачи
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" swaggertype:"string" format:"date-time"`                   // Время создания
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" swaggertype:"string" format:"date-time"`                   // Время последнего обновления
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" swaggertype:"string" format:"date-time"`                  // Время мягкого удаления
+	ID        uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	Title     string         `gorm:"size:255;not null" json:"title"`
+	Completed bool           `gorm:"default:false" json:"completed"`
+	DueDate   *time.Time     `json:"due_date,omitempty" swaggertype:"string" format:"date-time" example:"2023-12-31T23:59:59Z"`
+	Tags      pq.StringArray `gorm:"type:text[]" json:"tags" swaggertype:"array,string"`
+	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at" swaggertype:"string" format:"date-time"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at" swaggertype:"string" format:"date-time"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" swaggertype:"string" format:"date-time"`
 }
 
-// TodoFilter — структура для удобной передачи фильтров в репозиторий
+// TodoFilter groups the optional filters applied when listing todos.
 type TodoFilter struct {
 	Completed *bool
 	DueBefore *time.Time

@@ -11,11 +11,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// SetupRouter настраивает маршрутизатор с подключением к базе данных
+// SetupRouter wires up the HTTP router with the given DB handle.
 func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	// CORS middleware
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://todo.local", "http://localhost", "http://localhost:80"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -23,23 +22,18 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		AllowCredentials: true,
 	}))
 
-	// Спецификация OpenAPI 3.0 и Swagger UI — доступны через /api/docs
-
-
-	// Инициализация слоёв приложения
 	repo := repository.NewTodoRepository(db)
 	svc := service.NewTodoService(repo)
 	h := handler.NewTodoHandler(svc)
 	hh := handler.NewHealthHandler(db)
 
-	// Эндпоинты проверки состояния (обслуживаются на двух путях для гибкости)
+	// Health endpoints are served under two paths for flexibility.
 	r.GET("/healthz", hh.Healthz)
 	r.GET("/readyz", hh.Readyz)
 
-	// API группа
 	api := r.Group("/api")
 	{
-		// Документация Swagger UI — только если ENABLE_SWAGGER=true
+		// Swagger UI — only mounted when ENABLE_SWAGGER=true.
 		if os.Getenv("ENABLE_SWAGGER") == "true" {
 			api.StaticFile("/openapi.yaml", "./openapi.yaml")
 			api.GET("/docs", func(c *gin.Context) {
@@ -50,11 +44,9 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			})
 		}
 
-		// Эндпоинты здоровья также доступны через /api
 		api.GET("/healthz", hh.Healthz)
 		api.GET("/readyz", hh.Readyz)
 
-		// API версии 1
 		v1 := api.Group("/v1")
 		{
 			v1.GET("/healthz", hh.Healthz)

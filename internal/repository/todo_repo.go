@@ -9,10 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// ErrNotFound возвращается когда запрашиваемая запись не найдена
+// ErrNotFound is returned when the requested record does not exist.
 var ErrNotFound = errors.New("record not found")
 
-// TodoRepository — интерфейс репозитория для работы с задачами в базе данных
+// TodoRepository is the persistence interface for todos.
 type TodoRepository interface {
 	Create(ctx context.Context, todo *model.Todo) error
 	GetByID(ctx context.Context, id uint) (*model.Todo, error)
@@ -23,22 +23,22 @@ type TodoRepository interface {
 	GetDeleted(ctx context.Context) ([]model.Todo, error)
 }
 
-// todoRepository — реализация TodoRepository через GORM
+// todoRepository is the GORM-backed implementation of TodoRepository.
 type todoRepository struct {
 	db *gorm.DB
 }
 
-// NewTodoRepository создаёт новый репозиторий задач с подключением к БД
+// NewTodoRepository creates a new todo repository bound to the given DB handle.
 func NewTodoRepository(db *gorm.DB) TodoRepository {
 	return &todoRepository{db: db}
 }
 
-// Create сохраняет новую задачу в базе данных
+// Create persists a new todo.
 func (r *todoRepository) Create(ctx context.Context, todo *model.Todo) error {
 	return r.db.WithContext(ctx).Create(todo).Error
 }
 
-// GetByID возвращает задачу по её ID или ErrNotFound если не найдена
+// GetByID returns a todo by its ID, or ErrNotFound when missing.
 func (r *todoRepository) GetByID(ctx context.Context, id uint) (*model.Todo, error) {
 	var todo model.Todo
 	if err := r.db.WithContext(ctx).First(&todo, id).Error; err != nil {
@@ -50,7 +50,7 @@ func (r *todoRepository) GetByID(ctx context.Context, id uint) (*model.Todo, err
 	return &todo, nil
 }
 
-// GetAll возвращает список задач с применением фильтров (статус, поиск, даты)
+// GetAll returns todos filtered by completion status, search query, and date range.
 func (r *todoRepository) GetAll(ctx context.Context, filter model.TodoFilter) ([]model.Todo, error) {
 	var todos []model.Todo
 	query := r.db.WithContext(ctx).Model(&model.Todo{})
@@ -74,13 +74,12 @@ func (r *todoRepository) GetAll(ctx context.Context, filter model.TodoFilter) ([
 	return todos, nil
 }
 
-// Update сохраняет изменения задачи в базе данных
+// Update saves changes to the todo.
 func (r *todoRepository) Update(ctx context.Context, todo *model.Todo) error {
 	return r.db.WithContext(ctx).Save(todo).Error
 }
 
-// Delete выполняет мягкое удаление задачи по ID.
-// Возвращает ErrNotFound если ни одна запись не была затронута.
+// Delete soft-deletes a todo by ID. Returns ErrNotFound if no row was affected.
 func (r *todoRepository) Delete(ctx context.Context, id uint) error {
 	result := r.db.WithContext(ctx).Delete(&model.Todo{}, id)
 	if result.Error != nil {
@@ -92,12 +91,12 @@ func (r *todoRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-// DeleteCompleted выполняет мягкое удаление всех задач со статусом «выполнено»
+// DeleteCompleted soft-deletes every todo whose completed flag is true.
 func (r *todoRepository) DeleteCompleted(ctx context.Context) error {
 	return r.db.WithContext(ctx).Where("completed = ?", true).Delete(&model.Todo{}).Error
 }
 
-// GetDeleted возвращает список всех мягко удалённых задач
+// GetDeleted returns every soft-deleted todo.
 func (r *todoRepository) GetDeleted(ctx context.Context) ([]model.Todo, error) {
 	var todos []model.Todo
 	err := r.db.WithContext(ctx).Unscoped().Where("deleted_at IS NOT NULL").Find(&todos).Error

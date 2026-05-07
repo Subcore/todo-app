@@ -1,32 +1,32 @@
 ---
-# Роль: установка и настройка Nginx как reverse proxy + раздача статики
-# Источник конфига: web/nginx.conf — адаптирован для работы без Docker
+# Role: install and configure Nginx as a reverse proxy + static-file server.
+# Source of config: web/nginx.conf — adapted for non-Docker use.
 
-# 1. Установка nginx
+# 1. Install nginx.
 - name: Install nginx
   apt:
     name: nginx
     state: present
     update_cache: yes
 
-# 2. Удаляем дефолтный сайт nginx (страница "Welcome to nginx")
+# 2. Remove the default nginx site (the "Welcome to nginx" page).
 - name: Remove default nginx site
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
   notify: reload nginx
 
-# 3. Кладём наш конфиг сайта
-# Шаблон todo.conf.j2 основан на web/nginx.conf, но адаптирован:
-# - вместо Docker DNS (resolver 127.0.0.11) → прямой proxy_pass на localhost
-# - вместо имени контейнера "api" → 127.0.0.1:8080
+# 3. Drop in our site config.
+# The todo.conf.j2 template is based on web/nginx.conf, adapted:
+# - instead of Docker DNS (resolver 127.0.0.11) → direct proxy_pass to localhost
+# - instead of the container name "api" → 127.0.0.1:8080
 - name: Deploy site configuration
   template:
     src: todo.conf.j2
     dest: /etc/nginx/sites-available/todo.conf
   notify: reload nginx
 
-# 4. Включаем сайт (симлинк sites-available → sites-enabled)
+# 4. Enable the site (symlink sites-available → sites-enabled).
 - name: Enable site
   file:
     src: /etc/nginx/sites-available/todo.conf
@@ -34,7 +34,7 @@
     state: link
   notify: reload nginx
 
-# 5. Запускаем nginx
+# 5. Start nginx.
 - name: Ensure nginx is running
   service:
     name: nginx

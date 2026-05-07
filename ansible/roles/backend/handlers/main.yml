@@ -1,5 +1,5 @@
 ---
-# Перезапуск backend — вызывается когда обновился бинарник, .env или systemd unit
+# Restart backend — triggered when the binary, .env, or systemd unit changes.
 - name: restart backend
   systemd:
     name: todo-api

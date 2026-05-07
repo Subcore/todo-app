@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Проверка на этапе компиляции: MockRepository реализует repository.TodoRepository.
+// Compile-time check: MockRepository implements repository.TodoRepository.
 var _ repository.TodoRepository = (*MockRepository)(nil)
 
-// MockRepository — мок-реализация TodoRepository
+// MockRepository is a mock implementation of TodoRepository.
 type MockRepository struct {
 	mock.Mock
 }
@@ -58,18 +58,17 @@ func (m *MockRepository) GetDeleted(ctx context.Context) ([]model.Todo, error) {
 	return args.Get(0).([]model.Todo), args.Error(1)
 }
 
-// Проверяем создание задачи: обычная, с пустым заголовком, с тегами и датой
+// TestTodoService_CreateTodo covers the create path: happy path, blank title, tags + due date.
 func TestTodoService_CreateTodo(t *testing.T) {
 	ctx := context.Background()
 
-	// Успешное создание задачи с нормальным заголовком
+	// Successful create with a normal title.
 	t.Run("success", func(t *testing.T) {
-		// Подставляем фейковый репозиторий вместо настоящей базы
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
 		title := "Test Todo"
-		// Говорим фейку: когда попросят создать задачу с этим заголовком — верни nil (ошибок нет)
+		// Expect Create to be called with this title and no tags; return no error.
 		mockRepo.On("Create", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 			return todo.Title == title && !todo.Completed && len(todo.Tags) == 0
 		})).Return(nil)
@@ -81,11 +80,10 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		assert.Equal(t, title, todo.Title)
 		assert.False(t, todo.Completed)
 		assert.Equal(t, pq.StringArray([]string{}), todo.Tags)
-		// Проверяем что фейк вызвали именно так, как договаривались
 		mockRepo.AssertExpectations(t)
 	})
 
-	// Заголовок из одних пробелов должен отклоняться до обращения к базе
+	// A whitespace-only title must be rejected before reaching the repository.
 	t.Run("empty title error", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
@@ -96,7 +94,7 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		assert.Nil(t, todo)
 	})
 
-	// Теги и дата переданные снаружи должны сохраниться в задаче
+	// Tags and due date passed in must be preserved on the created todo.
 	t.Run("with tags and due date", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
@@ -105,7 +103,7 @@ func TestTodoService_CreateTodo(t *testing.T) {
 		tags := []string{"urgent", "work"}
 		now := time.Now()
 
-		// Говорим фейку: принять задачу только если у неё ровно 2 тега и есть дата
+		// Expect Create to receive a todo with exactly 2 tags and a due date.
 		mockRepo.On("Create", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 			return todo.Title == title && len(todo.Tags) == 2 && todo.DueDate != nil
 		})).Return(nil)
@@ -119,20 +117,18 @@ func TestTodoService_CreateTodo(t *testing.T) {
 	})
 }
 
-// Проверяем обновление задачи: успех, задача не найдена, пустой заголовок
+// TestTodoService_UpdateTodo covers the update path: success, not-found, blank title.
 func TestTodoService_UpdateTodo(t *testing.T) {
 	ctx := context.Background()
 
-	// Успешное обновление заголовка и статуса выполнения
+	// Successful update of title and completion status.
 	t.Run("success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
 		trueVal := true
 		existingTodo := &model.Todo{ID: 1, Title: "Old Title", Completed: false, Tags: []string{}}
-		// Говорим фейку: при запросе задачи с ID=1 — вернуть существующую задачу
 		mockRepo.On("GetByID", ctx, uint(1)).Return(existingTodo, nil)
-		// Говорим фейку: принять обновление если изменились заголовок и статус
 		mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 			return todo.ID == 1 && todo.Title == "New Title" && todo.Completed == true
 		})).Return(nil)
@@ -145,12 +141,11 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 	})
 
-	// Обновление несуществующей задачи должно вернуть ErrNotFound
+	// Updating a missing todo must surface ErrNotFound.
 	t.Run("not found", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
-		// Говорим фейку: задача 999 не существует
 		mockRepo.On("GetByID", ctx, uint(999)).Return(nil, repository.ErrNotFound)
 
 		todo, err := svc.UpdateTodo(ctx, 999, "Title", nil, nil, nil)
@@ -159,7 +154,7 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 		assert.Nil(t, todo)
 	})
 
-	// Попытка установить пустой заголовок при обновлении должна отклоняться
+	// Setting an empty title on update must be rejected.
 	t.Run("empty title on update", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
@@ -173,16 +168,15 @@ func TestTodoService_UpdateTodo(t *testing.T) {
 	})
 }
 
-// Проверяем удаление задачи: успех и задача не найдена
+// TestTodoService_DeleteTodo covers the delete path: success and not-found.
 func TestTodoService_DeleteTodo(t *testing.T) {
 	ctx := context.Background()
 
-	// Успешное удаление существующей задачи
+	// Successful delete of an existing todo.
 	t.Run("success", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
-		// Говорим фейку: когда попросят удалить задачу 1 — ответить что всё ок
 		mockRepo.On("Delete", ctx, uint(1)).Return(nil)
 
 		err := svc.DeleteTodo(ctx, 1)
@@ -191,12 +185,11 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 	})
 
-	// Удаление несуществующей задачи должно вернуть ErrNotFound
+	// Deleting a missing todo must surface ErrNotFound.
 	t.Run("not found", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 
-		// Говорим фейку: задача 999 не существует
 		mockRepo.On("Delete", ctx, uint(999)).Return(repository.ErrNotFound)
 
 		err := svc.DeleteTodo(ctx, 999)
@@ -206,16 +199,15 @@ func TestTodoService_DeleteTodo(t *testing.T) {
 	})
 }
 
-// Проверяем что GetTodo и GetAllTodos просто передают данные из репозитория наверх без изменений
+// TestTodoService_GetMethods checks that GetTodo and GetAllTodos pass through the repository unchanged.
 func TestTodoService_GetMethods(t *testing.T) {
 	ctx := context.Background()
 
-	// Получение одной задачи по ID
+	// Single-todo lookup by ID.
 	t.Run("GetTodo", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 		expected := &model.Todo{ID: 1, Title: "Test"}
-		// Говорим фейку: при запросе ID=1 вернуть заготовленную задачу
 		mockRepo.On("GetByID", ctx, uint(1)).Return(expected, nil)
 
 		todo, err := svc.GetTodo(ctx, 1)
@@ -224,13 +216,12 @@ func TestTodoService_GetMethods(t *testing.T) {
 		assert.Equal(t, expected, todo)
 	})
 
-	// Получение всего списка задач без фильтров
+	// List all todos with no filter applied.
 	t.Run("GetAllTodos", func(t *testing.T) {
 		mockRepo := new(MockRepository)
 		svc := NewTodoService(mockRepo)
 		expected := []model.Todo{{ID: 1, Title: "Test"}}
 		filter := model.TodoFilter{}
-		// Говорим фейку: вернуть список из одной задачи при пустом фильтре
 		mockRepo.On("GetAll", ctx, filter).Return(expected, nil)
 
 		todos, err := svc.GetAllTodos(ctx, filter)
@@ -240,7 +231,7 @@ func TestTodoService_GetMethods(t *testing.T) {
 	})
 }
 
-// Проверяем что новые теги и дата сохраняются при обновлении задачи
+// TestTodoService_UpdateTodo_WithTagsAndDueDate verifies new tags and due date are persisted on update.
 func TestTodoService_UpdateTodo_WithTagsAndDueDate(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockRepository)
@@ -250,9 +241,7 @@ func TestTodoService_UpdateTodo_WithTagsAndDueDate(t *testing.T) {
 	newTags := []string{"work", "urgent"}
 	due := time.Now().Add(24 * time.Hour)
 
-	// Говорим фейку: вернуть задачу без тегов и даты
 	mockRepo.On("GetByID", ctx, uint(5)).Return(existingTodo, nil)
-	// Говорим фейку: принять обновление только если появились 2 тега и дата
 	mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 		return todo.ID == 5 && len(todo.Tags) == 2 && todo.DueDate != nil
 	})).Return(nil)
@@ -265,7 +254,7 @@ func TestTodoService_UpdateTodo_WithTagsAndDueDate(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// Проверяем что если передать nil вместо тегов — существующие теги остаются нетронутыми
+// TestTodoService_UpdateTodo_NilTagsPreserveExisting verifies nil tags leave the existing tags untouched.
 func TestTodoService_UpdateTodo_NilTagsPreserveExisting(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockRepository)
@@ -274,14 +263,12 @@ func TestTodoService_UpdateTodo_NilTagsPreserveExisting(t *testing.T) {
 	existingTags := pq.StringArray{"work", "urgent"}
 	existingTodo := &model.Todo{ID: 7, Title: "Has Tags", Tags: existingTags}
 
-	// Говорим фейку: вернуть задачу с двумя тегами
 	mockRepo.On("GetByID", ctx, uint(7)).Return(existingTodo, nil)
-	// Говорим фейку: принять обновление — теги должны остаться (всё те же 2)
 	mockRepo.On("Update", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 		return todo.ID == 7 && len(todo.Tags) == 2
 	})).Return(nil)
 
-	// tags=nil → теги должны остаться ["work", "urgent"]
+	// tags=nil → existing tags ["work", "urgent"] must remain.
 	todo, err := svc.UpdateTodo(ctx, 7, "Has Tags", nil, nil, nil)
 
 	assert.NoError(t, err)
@@ -289,13 +276,13 @@ func TestTodoService_UpdateTodo_NilTagsPreserveExisting(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// Проверяем что сервис обрезает пробелы вокруг заголовка перед сохранением
+// TestTodoService_CreateTodo_TitleTrimmed verifies the service trims whitespace around the title before saving.
 func TestTodoService_CreateTodo_TitleTrimmed(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockRepository)
 	svc := NewTodoService(mockRepo)
 
-	// Говорим фейку: принять задачу только если заголовок уже без лишних пробелов
+	// Expect Create to receive the already-trimmed title.
 	mockRepo.On("Create", ctx, mock.MatchedBy(func(todo *model.Todo) bool {
 		return todo.Title == "spaced title"
 	})).Return(nil)
@@ -307,13 +294,12 @@ func TestTodoService_CreateTodo_TitleTrimmed(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// Проверяем что сервис вызывает DeleteCompleted в репозитории без лишних действий
+// TestTodoService_DeleteCompletedTodos verifies the service forwards DeleteCompleted to the repository unchanged.
 func TestTodoService_DeleteCompletedTodos(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockRepository)
 	svc := NewTodoService(mockRepo)
 
-	// Говорим фейку: когда попросят удалить выполненные — ответить что всё ок
 	mockRepo.On("DeleteCompleted", ctx).Return(nil)
 
 	err := svc.DeleteCompletedTodos(ctx)
@@ -322,7 +308,7 @@ func TestTodoService_DeleteCompletedTodos(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// Проверяем что сервис возвращает список удалённых задач из репозитория
+// TestTodoService_GetDeletedTodos verifies the service returns the list of deleted todos from the repository.
 func TestTodoService_GetDeletedTodos(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := new(MockRepository)
@@ -332,7 +318,6 @@ func TestTodoService_GetDeletedTodos(t *testing.T) {
 		{ID: 10, Title: "Deleted 1"},
 		{ID: 11, Title: "Deleted 2"},
 	}
-	// Говорим фейку: вернуть две удалённые задачи
 	mockRepo.On("GetDeleted", ctx).Return(expected, nil)
 
 	todos, err := svc.GetDeletedTodos(ctx)

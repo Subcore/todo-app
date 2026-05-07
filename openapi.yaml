@@ -15,24 +15,24 @@ paths:
   /api/v1/todos:
     get:
       operationId: listTodos
-      description: Возвращает список всех задач с возможностью фильтрации
+      description: Returns all todos, optionally filtered.
       parameters:
-        - description: Фильтр по статусу выполнения
+        - description: Filter by completion status
           in: query
           name: completed
           schema:
             type: boolean
-        - description: Поиск по заголовку (без учёта регистра)
+        - description: Case-insensitive title search
           in: query
           name: search
           schema:
             type: string
-        - description: Срок до (RFC3339)
+        - description: Due before (RFC3339)
           in: query
           name: due_before
           schema:
             type: string
-        - description: Срок после (RFC3339)
+        - description: Due after (RFC3339)
           in: query
           name: due_after
           schema:
@@ -62,18 +62,18 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Получить все задачи
+      summary: List todos
       tags:
         - todos
     post:
       operationId: createTodo
-      description: Создаёт новую задачу с заголовком
+      description: Creates a new todo from the request body.
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/handler.createTodoRequest"
-        description: Тело запроса задачи
+        description: Todo request body
         required: true
       responses:
         "201":
@@ -98,16 +98,16 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Создать задачу
+      summary: Create a todo
       tags:
         - todos
   "/api/v1/todos/{id}":
     delete:
       operationId: deleteTodo
-      description: Удаляет задачу по ID. Это мягкое удаление (через gorm.DeletedAt).
-        Запись остаётся в базе с меткой времени deleted_at.
+      description: Deletes a todo by ID. This is a soft delete (via gorm.DeletedAt) —
+        the row stays in the database with a deleted_at timestamp.
       parameters:
-        - description: ID задачи
+        - description: Todo ID
           in: path
           name: id
           required: true
@@ -115,7 +115,7 @@ paths:
             type: integer
       responses:
         "204":
-          description: Нет содержимого
+          description: No Content
         "400":
           description: Bad Request
           content:
@@ -140,14 +140,14 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Удалить задачу (мягкое удаление)
+      summary: Delete a todo (soft delete)
       tags:
         - todos
     get:
       operationId: getTodo
-      description: Возвращает задачу по её идентификатору
+      description: Returns a todo by its identifier.
       parameters:
-        - description: ID задачи
+        - description: Todo ID
           in: path
           name: id
           required: true
@@ -176,14 +176,14 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Получить задачу по ID
+      summary: Get a todo by ID
       tags:
         - todos
     put:
       operationId: updateTodo
-      description: Обновляет заголовок или статус задачи
+      description: Updates a todo's title, completion status, due date, or tags.
       parameters:
-        - description: ID задачи
+        - description: Todo ID
           in: path
           name: id
           required: true
@@ -194,7 +194,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/handler.updateTodoRequest"
-        description: Тело запроса обновления задачи
+        description: Todo update request body
         required: true
       responses:
         "200":
@@ -227,17 +227,17 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Обновить задачу
+      summary: Update a todo
       tags:
         - todos
   /api/v1/todos/clear-completed:
     post:
       operationId: clearCompleted
-      description: Удаляет все задачи со статусом «выполнено». Это мягкое удаление
-        (через gorm.DeletedAt).
+      description: Deletes every todo whose completed flag is true. This is a soft delete
+        (via gorm.DeletedAt).
       responses:
         "204":
-          description: Нет содержимого
+          description: No Content
         "400":
           description: Bad Request
           content:
@@ -254,13 +254,13 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Удалить все выполненные задачи (мягкое удаление)
+      summary: Delete all completed todos (soft delete)
       tags:
         - todos
   /api/v1/todos/deleted:
     get:
       operationId: listDeletedTodos
-      description: Возвращает список всех мягко удалённых задач
+      description: Returns every soft-deleted todo.
       responses:
         "200":
           description: OK
@@ -286,13 +286,13 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Получить все удалённые задачи
+      summary: List deleted todos
       tags:
         - todos
   /api/healthz:
     get:
       operationId: getHealthz
-      description: Возвращает 200 OK если сервис запущен. Доступен снаружи через ingress по пути /api/healthz.
+      description: Returns 200 OK as long as the service is running. Exposed externally via ingress at /api/healthz.
       responses:
         "200":
           description: OK
@@ -318,14 +318,14 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Проверка жизнеспособности
+      summary: Liveness check
       tags:
         - health
   /api/readyz:
     get:
       operationId: getReadyz
-      description: Возвращает 200 OK если сервис готов принимать трафик (соединение с
-        БД активно). Доступен снаружи через ingress по пути /api/readyz.
+      description: Returns 200 OK once the service is ready to accept traffic (database
+        connection is healthy). Exposed externally via ingress at /api/readyz.
       responses:
         "200":
           description: OK
@@ -351,7 +351,7 @@ paths:
                 additionalProperties:
                   type: string
                 type: object
-      summary: Проверка готовности
+      summary: Readiness check
       tags:
         - health
 components:
@@ -389,34 +389,34 @@ components:
     model.Todo:
       properties:
         completed:
-          description: Статус выполнения
+          description: Completion status
           type: boolean
         created_at:
-          description: Время создания
+          description: Creation timestamp
           format: date-time
           type: string
         deleted_at:
-          description: Время мягкого удаления
+          description: Soft-delete timestamp
           format: date-time
           type: string
         due_date:
-          description: Срок выполнения
+          description: Due date
           example: 2023-12-31T23:59:59Z
           format: date-time
           type: string
         id:
-          description: Уникальный идентификатор
+          description: Unique identifier
           type: integer
         tags:
-          description: Теги задачи
+          description: Todo tags
           items:
             type: string
           type: array
         title:
-          description: Заголовок задачи (макс. 255 символов)
+          description: Todo title (max 255 characters)
           type: string
         updated_at:
-          description: Время последнего обновления
+          description: Last-updated timestamp
           format: date-time
           type: string
       type: object

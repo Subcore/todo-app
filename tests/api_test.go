@@ -19,7 +19,7 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// Проверяем весь HTTP-стек от роутера до ответа — без базы данных
+// TestAPI_Healthz exercises the full HTTP stack from router to response — no database required.
 func TestAPI_Healthz(t *testing.T) {
 	r := router.SetupRouter(nil)
 	srv := httptest.NewServer(r)
@@ -36,7 +36,7 @@ func TestAPI_Healthz(t *testing.T) {
 	assert.Equal(t, "ok", body["status"])
 }
 
-// Проверяем что /readyz возвращает 503 когда база не настроена
+// TestAPI_Readyz_NoDB checks that /readyz returns 503 when no database is configured.
 func TestAPI_Readyz_NoDB(t *testing.T) {
 	r := router.SetupRouter(nil)
 	srv := httptest.NewServer(r)
@@ -49,7 +49,7 @@ func TestAPI_Readyz_NoDB(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
 
-// Проверяем что /readyz возвращает 200 {"status":"ok"} когда база доступна — важно для Kubernetes-проб готовности
+// TestAPI_Readyz_WithDB checks that /readyz returns 200 {"status":"ok"} when the database is reachable — required for Kubernetes readiness probes.
 func TestAPI_Readyz_WithDB(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -68,7 +68,7 @@ func TestAPI_Readyz_WithDB(t *testing.T) {
 	assert.Equal(t, "ok", body["status"])
 }
 
-// Проверяем полный цикл создание → список → получение → удаление через реальный HTTP
+// TestAPI_CRUD_Todo exercises the full create → list → get → delete cycle over real HTTP.
 func TestAPI_CRUD_Todo(t *testing.T) {
 	db := setupTestDB(t)
 
@@ -114,7 +114,7 @@ func TestAPI_CRUD_Todo(t *testing.T) {
 	assert.True(t, found, "created todo must appear in GET /api/v1/todos")
 
 	// --- GET /api/v1/todos/:id → 200 ---
-	// JSON декодирует числа как float64, поэтому конвертируем перед сборкой URL
+	// JSON decodes numbers as float64, so convert before building the URL.
 	idFloat, ok := id.(float64)
 	require.True(t, ok, "id must be a number")
 	idURL := fmt.Sprintf("%s/%.0f", base, idFloat)

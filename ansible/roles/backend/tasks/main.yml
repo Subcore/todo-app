@@ -1,18 +1,18 @@
 ---
-# Роль: деплой Go-бинарника на сервер
-# Источник: Dockerfile (стадия builder) — там собирается бинарник из cmd/api/main.go
-# Здесь мы делаем то же самое, но бинарник собран ЛОКАЛЬНО и копируется через Ansible
+# Role: deploy the Go binary to the server.
+# Source: Dockerfile (builder stage) — that's where the binary is built from cmd/api/main.go.
+# Here we do the same thing, but the binary is built LOCALLY and copied via Ansible.
 
-# 1. Создаём системного пользователя для запуска приложения
-# В Dockerfile это "adduser -D -g '' appuser"
+# 1. Create a system user for running the application.
+# In the Dockerfile this is "adduser -D -g '' appuser".
 - name: Create application user
   user:
     name: "{{ app_user }}"
     system: yes
-    shell: /usr/sbin/nologin   # не даём логиниться — только для запуска сервиса
+    shell: /usr/sbin/nologin   # disallow login — the user only runs the service
     create_home: no
 
-# 2. Создаём директорию для приложения
+# 2. Create the application directory.
 - name: Create application directory
   file:
     path: "{{ app_dir }}"
@@ -21,17 +21,17 @@
     group: "{{ app_user }}"
     mode: "0755"
 
-# 3. Собираем бинарник локально (на твоём Mac)
-# delegate_to: localhost — выполняется на твоей машине, не на сервере
-# Аналог стадии builder в Dockerfile:18
+# 3. Build the binary locally (on your Mac).
+# delegate_to: localhost — runs on your machine, not on the server.
+# Equivalent of the builder stage in Dockerfile:18.
 - name: Build backend binary locally
   delegate_to: localhost
   become: false
   shell: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o {{ playbook_dir }}/../todo-api ./cmd/api/main.go
   args:
-    chdir: "{{ playbook_dir }}/.."    # корень проекта
+    chdir: "{{ playbook_dir }}/.."    # project root
 
-# 4. Копируем собранный бинарник на сервер
+# 4. Copy the built binary to the server.
 - name: Copy backend binary
   copy:
     src: "{{ playbook_dir }}/../todo-api"
@@ -41,9 +41,9 @@
     mode: "0755"
   notify: restart backend
 
-# 4. Копируем файл миграции на сервер
-# В docker-compose это делает отдельный контейнер migrate
-# Здесь — просто копируем SQL и выполняем через psql
+# 4. Copy migration files to the server.
+# In docker-compose this is handled by a separate migrate container.
+# Here we just copy the SQL and run it through psql.
 - name: Create migrations directory
   file:
     path: "{{ app_dir }}/migrations"
@@ -56,37 +56,37 @@
     src: "{{ playbook_dir }}/../migrations/"
     dest: "{{ app_dir }}/migrations/"
 
-# 5. Накатываем миграцию
-# В docker-compose это контейнер migrate/migrate
-# Здесь используем psql напрямую — проще, не нужен отдельный инструмент
+# 5. Apply the migration.
+# In docker-compose this is the migrate/migrate container.
+# Here we use psql directly — simpler, no extra tooling required.
 - name: Run database migrations
   become_user: postgres
   shell: psql -d {{ db_name }} -f {{ app_dir }}/migrations/000001_create_todos_table.up.sql
   args:
     executable: /bin/bash
-  changed_when: false    # SQL идемпотентен (CREATE TABLE IF NOT EXISTS)
+  changed_when: false    # SQL is idempotent (CREATE TABLE IF NOT EXISTS)
 
-# 6. Создаём .env файл с настройками подключения к БД
-# Источник переменных: docker-compose.yaml → environment секция сервиса api
+# 6. Create the .env file with the DB connection settings.
+# Source of variables: docker-compose.yaml → environment section of the api service.
 - name: Create environment file
   template:
     src: env.j2
     dest: "{{ app_dir }}/.env"
     owner: "{{ app_user }}"
     group: "{{ app_user }}"
-    mode: "0600"               # только владелец читает — тут пароль от БД
+    mode: "0600"               # owner-only read — contains the DB password
   notify: restart backend
 
-# 7. Создаём systemd-сервис
-# Это замена "docker run" — systemd управляет процессом:
-# автозапуск, рестарт при падении, логи через journalctl
+# 7. Create the systemd service.
+# This replaces "docker run" — systemd manages the process:
+# autostart, restart on failure, logs via journalctl.
 - name: Create systemd service
   template:
     src: todo-api.service.j2
     dest: /etc/systemd/system/todo-api.service
   notify: restart backend
 
-# 8. Запускаем сервис
+# 8. Start the service.
 - name: Enable and start backend service
   systemd:
     name: todo-api

@@ -1,6 +1,6 @@
 ---
-# Reload nginx — применяет новый конфиг без обрыва соединений
-# reload (не restart) — стандартная практика для nginx
+# Reload nginx — applies the new config without dropping connections.
+# reload (not restart) is the standard practice for nginx.
 - name: reload nginx
   service:
     name: nginx

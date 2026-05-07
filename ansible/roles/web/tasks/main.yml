@@ -1,19 +1,19 @@
 ---
-# Роль: копируем статический фронтенд на сервер
-# Источник файлов: папка web/ в проекте
-# В docker-compose это отдельный контейнер с nginx (Dockerfile.web)
-# Здесь мы просто кладём файлы в папку, а nginx (следующая роль) их отдаёт
+# Role: copy the static frontend to the server.
+# Source of files: the web/ folder in the project.
+# In docker-compose this is a separate nginx container (Dockerfile.web).
+# Here we just place the files into a directory; nginx (the next role) serves them.
 
-# 1. Создаём директорию для сайта
+# 1. Create the site directory.
 - name: Create web directory
   file:
     path: "{{ web_dir }}"
     state: directory
-    owner: www-data          # стандартный пользователь nginx на Ubuntu
+    owner: www-data          # standard nginx user on Ubuntu
     group: www-data
     mode: "0755"
 
-# 2. Копируем index.html — главная страница приложения
+# 2. Copy index.html — the application's main page.
 - name: Copy index.html
   copy:
     src: ../../../web/index.html
@@ -21,7 +21,7 @@
     owner: www-data
     group: www-data
 
-# 3. Копируем docs.html — страница Swagger UI
+# 3. Copy docs.html — the Swagger UI page.
 - name: Copy docs.html
   copy:
     src: ../../../web/docs.html
@@ -29,7 +29,7 @@
     owner: www-data
     group: www-data
 
-# 4. Копируем assets (CSS, JS)
+# 4. Copy assets (CSS, JS).
 - name: Copy assets
   copy:
     src: ../../../web/assets/
