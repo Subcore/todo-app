@@ -1,445 +1,398 @@
 # Todo App v2
 
-**Tech stack:** Go 1.24.1, Gin, GORM, PostgreSQL 16.2, golang-migrate v4.19.1, Docker Compose, Kind v0.31.0, kubectl v1.35.3, Helm v4.1.3, NGINX Ingress v1.12.1, GitHub Actions
+A small REST-based todo service built in Go, designed as a portfolio project to showcase a full path from local development to production. The same codebase ships in four ways: Docker Compose for fast iteration, a local Kind cluster for Kubernetes practice, a GKE cluster managed by Terraform with FluxCD running GitOps, and a single-node VPS deployment driven by Ansible.
 
-━━━━━━━━━━━━━━━━━━━━
-## Requirements
-━━━━━━━━━━━━━━━━━━━━
+[![CI](https://github.com/Subcore/todo-app-v2/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+![Go](https://img.shields.io/badge/go-1.24.1-00ADD8?logo=go)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-**REST API** documented with OpenAPI 3.0 — Swagger UI served at `/docs`.
+[Русская версия](README.ru.md)
 
-| Environment | Swagger URL |
+---
+
+## Tech Stack
+
+| Layer | Tool |
 |---|---|
-| Docker Compose | http://localhost:8080/docs |
-| Kubernetes | http://todo.local/docs |
+| Language / runtime | Go 1.24.1 |
+| HTTP framework | Gin |
+| ORM | GORM |
+| Database | PostgreSQL 16.2 |
+| Migrations | [golang-migrate](https://github.com/golang-migrate/migrate) v4.19.1 |
+| Frontend | Static HTML + Alpine.js + Tailwind CSS |
+| API spec | OpenAPI 3.0 (Swagger UI at `/docs`) |
+| Containers | Docker, Docker Compose |
+| Local Kubernetes | Kind v0.31.0 |
+| Kubernetes tools | kubectl v1.35.3, Helm v4.1.3 |
+| Ingress | NGINX Ingress v1.12.1 |
+| Cloud infra (IaC) | Terraform (GCP / GKE) |
+| GitOps | FluxCD (Helm + image automation) |
+| VPS deployment | Ansible |
+| CI | GitHub Actions, GHCR |
 
-━━━━━━━━━━━━━━━━━━━━
-## Data Layer
-━━━━━━━━━━━━━━━━━━━━
+---
 
-**Database:** PostgreSQL 16.2
+## Architecture
 
-**Why PostgreSQL?** Structured data with filters (completed, dueDate range, text search) and typed fields. Relational constraints, ACID, `text[]` arrays for tags out of the box. `ILIKE` covers search without extra services. For a todo app with predictable schema and filters, SQL fits better than MongoDB — no need to duplicate validation in app code.
+End-to-end GitOps flow for the GKE deployment:
 
-**ORM:** GORM
-
-**Why GORM?** Less code for basic CRUD. The alternative sqlc requires noticeably more boilerplate.
-
-━━━━━━━━━━━━━━━━━━━━
-## Migrations
-━━━━━━━━━━━━━━━━━━━━
-
-**Tool:** [golang-migrate v4.19.1](https://github.com/golang-migrate/migrate) — versioned SQL files (up/down) in `migrations/`.
-
-**Why not GORM AutoMigrate?** No down-migrations, no version control on schema, can silently drop data on column renames. golang-migrate files can be reviewed in PRs, rolled back, and replayed on any environment.
-
-━━━━━━━━━━━━━━━━━━━━
-## Minimal Feature Set
-━━━━━━━━━━━━━━━━━━━━
-
-**CRUD Todos** with fields: title, completed, dueDate, tags (optional).
-
-**Endpoints:**
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/v1/todos` | List todos with filters |
-| `POST` | `/api/v1/todos` | Create a todo |
-| `GET` | `/api/v1/todos/:id` | Get one todo |
-| `PUT` | `/api/v1/todos/:id` | Update a todo |
-| `DELETE` | `/api/v1/todos/:id` | Soft delete |
-| `POST` | `/api/v1/todos/clear-completed` | Delete all completed |
-
-**Filters:** `?completed=true`, `?due_before=2025-01-01T00:00:00Z`, `?due_after=...`, `?search=grocery`
-
-**Health endpoints:**
-
-| Path | Type |
-|---|---|
-| `/healthz` | Liveness probe |
-| `/readyz` | Readiness probe + DB ping |
-
-**Tests:** service-level unit tests + API integration tests against real PostgreSQL (with `-race` flag).
-
-**Frontend:** static HTML page (Alpine.js + Tailwind CSS) served from the API — list / add / complete todos.
-
-━━━━━━━━━━━━━━━━━━━━
-## Deliverables
-━━━━━━━━━━━━━━━━━━━━
-
-- `openapi.yaml` — OpenAPI 3.0 spec, validated in CI
-- Source code — this repository
-- Architecture & tradeoffs — covered in [Data Layer](#data-layer), [Migrations](#migrations), and [Ingress](#ingress--service-exposure) sections of this README
-
-━━━━━━━━━━━━━━━━━━━━
-## Local Dev Environment
-━━━━━━━━━━━━━━━━━━━━
-
-Goal: one-command local run using Docker Compose.
-
-### Prerequisites
-
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
+```
+ ┌────────────┐    push    ┌──────────────────┐   build & push   ┌─────────┐
+ │  Developer │ ─────────▶ │  GitHub Actions  │ ───────────────▶ │  GHCR   │
+ └────────────┘            │   (CI workflow)  │                  └────┬────┘
+                           └──────────────────┘                       │
+                                                                      │ image
+                                                                      ▼
+ ┌──────────────┐  reconcile  ┌─────────────┐  HelmRelease   ┌─────────────────┐
+ │ k8s/cluster/ │ ◀─────────  │   FluxCD    │ ─────────────▶ │  GKE (todo-app) │
+ │  (manifests) │   git pull  │  on cluster │                │  Postgres + API │
+ └──────┬───────┘             └─────┬───────┘                │  + web + nginx  │
+        ▲                           │                        └─────────────────┘
+        │ patch HelmRelease         │ image automation
+        └───────────────────────────┘  detects new tag in GHCR
 ```
 
-Verify: `docker version`
+- Code merges to `main` → CI builds two images (`todo-api`, `todo-web`) and pushes them to `ghcr.io`.
+- Flux's image-reflector + image-automation controllers watch GHCR, find a newer tag matching `^main-<timestamp>-<sha>$`, and rewrite [k8s/cluster/todo-app/helmrelease.yaml](k8s/cluster/todo-app/helmrelease.yaml) on `main`.
+- Flux reconciles the new commit and rolls out the new HelmRelease against the cluster.
 
-macOS: https://docs.docker.com/desktop/mac/install/
+---
 
-For Kubernetes — install Docker first, then:
+## Quick Start
+
+Pick one of the four paths below.
+
+### Option 1 — Docker Compose (local dev)
+
+The fastest way to run the app on your laptop. Brings up PostgreSQL, runs migrations, then starts the API and the web container.
 
 ```bash
-sudo apt install make   # if MAKE is not installed
-make install-tools      # installs kind, kubectl, helm, golang-migrate
-```
-
-### How to run docker compose up
-
-```bash
+cp .env.example .env
 docker compose up --build -d
 ```
 
-| Service | Description |
+| URL | What |
 |---|---|
-| **db** | PostgreSQL 16.2, port 5432 |
-| **migrate** | Runs migrations and exits |
-| **api** | Go server, port 8080 |
+| http://localhost:8080 | API (`/api/v1/todos`, `/healthz`, `/readyz`) |
+| http://localhost:8080/docs | Swagger UI |
+| http://localhost | Static frontend (separate `todo-web` container) |
 
-The API won't start until migrations finish. Check status: `docker compose ps`
-
-### How to run migrations
-
-**Docker Compose** — automatic. The `migrate` service applies all pending migrations before the API starts.
-
-**Kubernetes:**
+Useful commands:
 
 ```bash
-make migrate
+docker compose logs -f api          # tail API logs
+docker compose --profile seed up seed   # load seeds/seed.sql (3 sample todos)
+docker compose down                 # stop containers
+docker compose down -v              # stop + drop the postgres volume
 ```
 
-### How to seed data
+---
 
-Test data in `seeds/seed.sql` — 3 sample todos. Idempotent, inserts only if the table is empty. Not automatic — DB starts clean unless you explicitly seed.
+### Option 2 — Local Kubernetes (Kind)
 
-| Environment | Command |
+A self-contained local cluster: Kind + a local Docker registry, NGINX Ingress, PostgreSQL via the bitnami Helm chart, and our own Helm chart for the app.
+
+```bash
+make install-tools    # installs kind, kubectl, helm, golang-migrate
+make deploy-kind      # one-shot 11-step pipeline
+```
+
+What `make deploy-kind` does:
+
+1. Spawns a local Docker registry on `localhost:5000`
+2. Creates the Kind cluster (control-plane + worker)
+3. Connects the registry to Kind's network
+4. Configures containerd on each node to pull from the registry
+5. Installs NGINX Ingress Controller
+6. Builds and pushes API + web Docker images
+7. Deploys PostgreSQL (bitnami) and the app via Helm
+8. Runs database migrations
+9. Adds `todo.local` to `/etc/hosts`
+10. Runs a smoke test against `/api/v1/healthz`
+
+Once finished:
+
+| URL | What |
 |---|---|
-| Docker Compose | `docker compose --profile seed up seed` |
-| Kubernetes | `make seed` |
+| http://todo.local/web | Frontend |
+| http://todo.local/api | API |
+| http://todo.local/api/docs | Swagger UI |
 
-### How to open the app locally
+Troubleshooting:
 
-| Environment | URL |
+- **`CrashLoopBackOff`** — Postgres usually isn't ready yet. `kubectl logs deploy/todo` and `kubectl logs sts/todo-postgresql`. If you see `password authentication failed`, recreate: `make delete-cluster && make deploy-kind`.
+- **`ErrImagePull` / `ImagePullBackOff`** — local registry isn't running: `make create-registry`.
+- **`port already in use`** — `lsof -i :8080` (Compose) or `lsof -i :80` (Kind). Either kill the process or change the port in `.env` / [kind-config.yaml](kind-config.yaml).
+- **Both Compose and Kind running** — both expose Postgres on 5432. Stop Compose first: `docker compose down`.
+
+---
+
+### Option 3 — GCP / GKE with Terraform + FluxCD (production path)
+
+This is the main production-style deployment. Terraform provisions the GKE cluster and bootstraps FluxCD; from that point on, the cluster reconciles itself from this repo.
+
+**Prerequisites:**
+
+- `gcloud` CLI (authenticated: `gcloud auth login && gcloud auth application-default login`)
+- `kubectl`, `helm`, `terraform` ≥ 1.5
+- A GitHub Personal Access Token with `repo` scope (for Flux to clone the repo and for `ghcr-secret`)
+- A GCP project with billing enabled
+
+**Step 1 — provision infrastructure with Terraform**
+
+```bash
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+# Edit terraform.tfvars and set project_id, then export non-tfvars secrets:
+export TF_VAR_db_password=$(openssl rand -hex 16)
+export TF_VAR_github_owner=<your-gh-user-or-org>
+export TF_VAR_github_repository=todo-app-v2
+export TF_VAR_github_token=<github-pat>
+
+make tf-bootstrap GCP_PROJECT=<your-project-id>   # creates GCS bucket for tfstate
+make tf-init      GCP_PROJECT=<your-project-id>
+make tf-plan      GCP_PROJECT=<your-project-id>
+make tf-apply     GCP_PROJECT=<your-project-id>
+make tf-kubeconfig GCP_PROJECT=<your-project-id>  # configure kubectl context
+```
+
+What Terraform creates ([terraform/main.tf](terraform/main.tf), [terraform/flux.tf](terraform/flux.tf)):
+
+| Resource | Details |
 |---|---|
-| Docker Compose | http://localhost:8080 |
-| Kubernetes | http://todo.local |
+| VPC | `todo-vpc` with subnet `10.10.0.0/20`, secondary ranges for pods/services |
+| GKE cluster | `todo-cluster`, zonal (`asia-southeast1-b` by default) |
+| Node pool: `system-pool` | `e2-standard-2` Spot — Flux, ingress-nginx |
+| Node pool: `db-pool` | `e2-small` Spot, tainted — PostgreSQL only |
+| Node pool: `app-pool` | `e2-standard-4` Spot, autoscaling 1–2 — application pods |
+| Static IP | `todo-ingress-ip` — wired into ingress-nginx via ConfigMap |
+| FluxCD | bootstrapped against this repo at path `k8s/cluster`, with image-reflector + image-automation controllers |
+| Secrets | `ghcr-secret` (in `flux-system` and `todo-app`), `todo-db-credentials` |
 
-`make deploy-kind` adds `todo.local` to `/etc/hosts` automatically.
+**Step 2 — Flux takes over**
 
-### How to open Swagger UI
+After `tf-apply` finishes, Flux pulls [k8s/cluster/](k8s/cluster/) and deploys:
 
-| Environment | URL |
+- `ingress-nginx` — [k8s/cluster/ingress-nginx/helmrelease.yaml](k8s/cluster/ingress-nginx/helmrelease.yaml)
+- `todo-postgresql` (bitnami chart, persistent volume) — [k8s/cluster/todo-app/helmrelease.yaml](k8s/cluster/todo-app/helmrelease.yaml)
+- `todo-app` (our Helm chart from [deploy/helm/todo-app](deploy/helm/todo-app/))
+
+Verify:
+
+```bash
+kubectl get helmrelease -A
+flux get all -A
+flux logs -f
+```
+
+The app becomes reachable at `http://<static-ip>.nip.io/web` (the IP comes from `kubectl -n ingress-nginx get svc ingress-nginx-controller`; Flux injects it into the ingress host as `<ip>.nip.io`).
+
+**Step 3 — image automation (continuous deploy)**
+
+[k8s/cluster/todo-app/image-automation.yaml](k8s/cluster/todo-app/image-automation.yaml) defines two `ImageRepository` + `ImagePolicy` pairs (one for `todo-api`, one for `todo-web`) and an `ImageUpdateAutomation`. Lifecycle:
+
+1. CI on `main` builds and pushes `ghcr.io/<owner>/todo-api:main-<ts>-<sha>` and the same for `todo-web`.
+2. Flux's image-reflector picks up new tags within 5 minutes.
+3. The image-automation controller patches the `# {"$imagepolicy": ...}` setter markers in `helmrelease.yaml` and pushes a `chore: update images to ...` commit to `main`.
+4. Flux reconciles, the HelmRelease is updated, and the new pods roll out.
+
+**Cleanup:** `make tf-destroy GCP_PROJECT=<your-project-id>` (tears down GKE, VPC, static IP, Flux deploy key — everything Terraform created).
+
+---
+
+### Option 4 — VPS deployment (Ansible)
+
+A "classic" deployment for a single Linux VPS: PostgreSQL on the host, the Go binary as a systemd service, static frontend served by nginx, with nginx also reverse-proxying `/api` to the Go process.
+
+**Prerequisites:**
+
+- A Linux VPS reachable over SSH (root or sudo) with an SSH key on your machine
+- Ansible: `pip install ansible`
+- Go (used for cross-compiling the binary on your machine)
+
+**Configuration:**
+
+```bash
+cp ansible/inventory.example ansible/inventory.ini
+# Edit ansible/inventory.ini — set the server IP and your SSH key path
+```
+
+[ansible/inventory.example](ansible/inventory.example):
+
+```ini
+[servers]
+<YOUR_SERVER_IP> ansible_user=root ansible_port=22 ansible_ssh_private_key_file=~/.ssh/id_rsa
+```
+
+**Deploy:**
+
+```bash
+make deploy-vps
+```
+
+This runs `make build-linux` (cross-compiles `cmd/api/main.go` to a Linux amd64 binary) and then `ansible-playbook ansible/playbook.yml`. The four roles in [ansible/roles/](ansible/roles/):
+
+| Role | What it does |
 |---|---|
-| Docker Compose | http://localhost:8080/docs |
-| Kubernetes | http://todo.local/docs |
+| `postgresql` | Installs PostgreSQL, creates the `todo_db` database and `todo` user |
+| `backend` | Copies the Go binary to `/opt/todo-api`, creates a systemd unit, enables the service |
+| `web` | Copies `web/index.html`, `docs.html`, and assets to `/var/www/todo` |
+| `nginx` | Installs nginx, deploys a reverse-proxy config (static + `/api` → `127.0.0.1:8080`) |
 
-### Common troubleshooting
+Result: `http://<YOUR_SERVER_IP>` (frontend), `http://<YOUR_SERVER_IP>/api` (API), `http://<YOUR_SERVER_IP>/api/docs` (Swagger).
 
-**CrashLoopBackOff** — usually PostgreSQL isn't ready yet. Check `kubectl logs deploy/todo` and `kubectl logs sts/todo-postgresql`. Give it a minute. If `password authentication failed`: `make delete-cluster && make deploy-kind`
+---
 
-**ErrImagePull / ImagePullBackOff** — local registry not running: `make create-registry`
+## Project Structure
 
-**"connection refused" on docker push** — same fix: `make create-registry`
+```
+.
+├── cmd/api/                 # main.go — Gin server entrypoint
+├── internal/
+│   ├── config/              # env-based config loading
+│   ├── handler/             # HTTP handlers (todo, health)
+│   ├── model/               # GORM models
+│   ├── repository/          # DB queries
+│   ├── router/              # route registration + middleware
+│   └── service/             # business logic
+├── migrations/              # golang-migrate up/down SQL files
+├── seeds/seed.sql           # idempotent sample data
+├── tests/                   # integration tests (real PostgreSQL)
+├── web/                     # static frontend (Alpine.js + Tailwind)
+│
+├── deploy/helm/todo-app/    # Helm chart used by Kind and FluxCD
+│
+├── k8s/cluster/             # FluxCD manifests reconciled on GKE
+│   ├── flux-system/         # Flux components (bootstrapped by Terraform)
+│   ├── ingress-nginx/       # ingress-nginx HelmRelease
+│   └── todo-app/            # app namespace, HelmRelease, image automation
+│
+├── terraform/               # GCP infrastructure (VPC + GKE + Flux bootstrap)
+│   └── bootstrap/           # one-shot module that creates the GCS state bucket
+│
+├── ansible/                 # VPS deployment
+│   ├── playbook.yml
+│   ├── inventory.example
+│   └── roles/{nginx,postgresql,backend,web}/
+│
+├── .github/workflows/ci.yml # CI: lint, OpenAPI/Helm lint, tests, image build & push
+├── docker-compose.yaml      # local dev stack
+├── Dockerfile, Dockerfile.web
+├── kind-config.yaml         # Kind cluster definition
+├── openapi.yaml             # OpenAPI 3.0 spec (validated in CI)
+└── Makefile                 # all developer/ops entry points
+```
 
-**Port already in use** — `lsof -i :8080` (Compose) or `lsof -i :80` (Kind). Kill the process or change port in `.env` / `kind-config.yaml`.
+---
 
-**Running both Compose and Kind** — two PostgreSQL instances (one from Docker Compose, one from Kind) can conflict on port 5432. Stop Compose before working with Kind: `docker compose down`
+## Configuration
 
-━━━━━━━━━━━━━━━━━━━━
-## Running Tests Locally
-━━━━━━━━━━━━━━━━━━━━
+Environment variables read by [cmd/api/main.go](cmd/api/main.go) via [internal/config/](internal/config/). See [.env.example](.env.example) for the full list.
 
-### Unit tests (no database required)
+| Variable | Default | Notes |
+|---|---|---|
+| `PORT` | `8080` | API listen port |
+| `DB_HOST` | `localhost` | |
+| `DB_PORT` | `5432` | |
+| `DB_USER` | `postgres` | |
+| `DB_PASSWORD` | `postgres` | Override in non-dev environments |
+| `DB_NAME` | `todo_db` | CI uses `todo_test` |
+| `DB_SSLMODE` | `disable` | |
+| `DB_MAX_IDLE_CONNS` | `10` | |
+| `DB_MAX_OPEN_CONNS` | `100` | |
+| `DB_CONN_MAX_LIFETIME` | `1h` | |
+| `ENABLE_SWAGGER` | unset | Set to `true` to expose `/docs` |
+
+Per-deployment example files:
+
+- [.env.example](.env.example) — Docker Compose
+- [terraform/terraform.tfvars.example](terraform/terraform.tfvars.example) — Terraform variables
+- [ansible/inventory.example](ansible/inventory.example) — Ansible inventory
+
+---
+
+## Development
+
+Common `make` targets (run `make help` for the full list):
+
+| Target | Description |
+|---|---|
+| `make test` | `go test ./...` |
+| `make lint` | `golangci-lint run` + `helm lint` |
+| `make run` | `docker compose up` |
+| `make deploy-kind` | Full local Kubernetes pipeline |
+| `make migrate` | Apply migrations against the Kind Postgres |
+| `make migrate-down` | Roll back the last migration |
+| `make seed` | Load `seeds/seed.sql` into the Kind Postgres |
+| `make build-linux` | Cross-compile the Go binary for Linux amd64 |
+| `make deploy-vps` | Build binary + run Ansible playbook |
+| `make tf-{bootstrap,init,plan,apply,destroy,kubeconfig}` | Terraform lifecycle |
+| `make clean` | Delete Kind cluster and registry |
+
+### Tests
+
+Unit tests (no DB):
 
 ```bash
 go test ./internal/handler/... ./internal/service/... -v -race
 ```
 
-### Integration tests (requires PostgreSQL)
+Integration tests (require PostgreSQL):
 
 ```bash
-# 1. Start PostgreSQL
 docker compose up db -d
-
-# 2. Create test database and run migrations
 PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE todo_test;"
 migrate -path migrations \
   -database "postgres://postgres:postgres@localhost:5432/todo_test?sslmode=disable" up
-
-# 3. Run all tests
 TEST_DB_DSN="host=localhost port=5432 user=postgres password=postgres dbname=todo_test sslmode=disable" \
   go test ./... -v -race
 ```
 
-> **Note:** CI uses `todo_test` database. Docker Compose app uses `todo_db`.
+> CI uses `todo_test`; the Docker Compose app uses `todo_db` — they don't collide.
 
-━━━━━━━━━━━━━━━━━━━━
-## Local Kubernetes Cluster
-━━━━━━━━━━━━━━━━━━━━
+### API surface
 
-Kind cluster: 1 control-plane + 1 worker node.
+REST API documented in [openapi.yaml](openapi.yaml) and rendered as Swagger UI at `/docs` when `ENABLE_SWAGGER=true`.
 
-```bash
-make deploy-kind
-```
-
-This single command:
-
-1. Creates local Docker registry on `localhost:5000`
-2. Creates Kind cluster
-3. Connects registry to Kind network
-4. Configures registry on Kind nodes
-5. Installs NGINX Ingress Controller
-6. Builds and pushes Docker image
-7. Deploys PostgreSQL (bitnami/postgresql) and the app via Helm
-8. Runs migrations
-9. Adds `todo.local` to `/etc/hosts`
-10. Runs smoke test
-
-After that: http://todo.local
-
-━━━━━━━━━━━━━━━━━━━━
-## Build Pipeline
-━━━━━━━━━━━━━━━━━━━━
-
-CI runs on GitHub Actions (`.github/workflows/ci.yml`), triggers on push/PR to `main`.
-
-1. **Lint** — `golangci-lint` (errcheck, staticcheck, gosimple, unused)
-2. **OpenAPI validation** — `@redocly/cli lint openapi.yaml`
-3. **Helm lint** — `helm lint` with bitnami dependency
-4. **Tests** — unit + integration tests against real PostgreSQL, with `-race` flag
-5. **Docker build & push** — multi-stage build, pushes to GHCR on `main`
-
-━━━━━━━━━━━━━━━━━━━━
-## Helm Packaging
-━━━━━━━━━━━━━━━━━━━━
-
-Chart lives in `deploy/helm/todo-app/`.
-
-**Templates:**
-
-- `deployment.yaml` — API Deployment with liveness/readiness probes
-- `service.yaml` — ClusterIP (port 80 → 8080)
-- `ingress.yaml` — NGINX Ingress, host: `todo.local`
-- `configmap.yaml` — DB connection settings
-- `secret.yaml` — DB credentials
-
-**Dependency:** bitnami/postgresql 18.5.11 (persistence disabled for dev)
-
-**Key values:**
-
-```yaml
-image:
-  repository: localhost:5000/todo-api
-  tag: latest
-  pullPolicy: IfNotPresent
-
-replicaCount: 1
-
-ingress:
-  enabled: true
-  className: nginx
-  host: todo.local
-
-resources:
-  requests: { cpu: 100m, memory: 128Mi }
-  limits:   { cpu: 200m, memory: 256Mi }
-```
-
-━━━━━━━━━━━━━━━━━━━━
-## Cluster Configuration
-━━━━━━━━━━━━━━━━━━━━
-
-Kubeconfig targets the Kind cluster (context: `kind-todo`).
-
-**Database:** PostgreSQL deployed via bitnami/postgresql Helm subchart. Persistence disabled — data lives in emptyDir and dies with the pod. Fine for local dev; in production use PVC or managed DB (RDS, Cloud SQL).
-
-━━━━━━━━━━━━━━━━━━━━
-## Deploy Application
-━━━━━━━━━━━━━━━━━━━━
-
-Deploy the app to the Kind cluster via Helm. The image is pulled from the local registry, tag is the short commit hash:
-
-```bash
-helm upgrade --install todo ./deploy/helm/todo-app \
-  --set image.repository=localhost:5000/todo-api \
-  --set image.tag=$GIT_SHA
-```
-
-━━━━━━━━━━━━━━━━━━━━
-## Release Workflow
-━━━━━━━━━━━━━━━━━━━━
-
-```bash
-make deploy-kind
-```
-
-Steps performed:
-1. Create local Docker registry (if not exists)
-2. Create Kind cluster (if not exists)
-3. Connect registry to Kind network
-4. Build & push image to local registry (`localhost:5000`)
-5. Run Helm deploy
-6. Run migrations
-7. Configure `/etc/hosts`
-8. Run smoke test
-
-━━━━━━━━━━━━━━━━━━━━
-## Ingress / Service Exposure
-━━━━━━━━━━━━━━━━━━━━
-
-NGINX Ingress Controller installed via Helm. Kind `extraPortMappings` routes host ports 80/443 to the control-plane node.
-
-App is exposed at http://todo.local (Ingress rule with host `todo.local`).
-
-━━━━━━━━━━━━━━━━━━━━
-## Explain Choice: NGINX vs MetalLB
-━━━━━━━━━━━━━━━━━━━━
-
-**NGINX Ingress** — used in this project. Kind `extraPortMappings` in `kind-config.yaml` forwards ports 80/443 from the host (or VM) to the control-plane node. The app is accessible at `http://todo.local` — works both locally and on a VM.
-
-━━━━━━━━━━━━━━━━━━━━
-## Cleanup
-━━━━━━━━━━━━━━━━━━━━
-
-| Environment | Command | What it does |
+| Method | Path | Description |
 |---|---|---|
-| Docker Compose | `docker compose down` | Stop containers |
-| Docker Compose | `docker compose down -v` | Stop + delete DB data |
-| Kubernetes | `make delete-cluster` | Delete Kind cluster |
-| Kubernetes | `make clean` | Cluster + registry |
-| GCP | `make tf-destroy GCP_PROJECT=$GCP_PROJECT` | Destroy GKE cluster + VPC |
+| `GET` | `/api/v1/todos` | List todos (filters: `completed`, `due_before`, `due_after`, `search`) |
+| `POST` | `/api/v1/todos` | Create a todo |
+| `GET` | `/api/v1/todos/:id` | Get one todo |
+| `PUT` | `/api/v1/todos/:id` | Update a todo |
+| `DELETE` | `/api/v1/todos/:id` | Soft delete |
+| `POST` | `/api/v1/todos/clear-completed` | Delete all completed todos |
+| `GET` | `/healthz` | Liveness |
+| `GET` | `/readyz` | Readiness + DB ping |
 
-━━━━━━━━━━━━━━━━━━━━
-## GCP Deployment (GKE)
-━━━━━━━━━━━━━━━━━━━━
+---
 
-Deploy the app to Google Kubernetes Engine with Terraform and Helm.
+## CI/CD Pipeline
 
-### Prerequisites
+GitHub Actions workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml). Triggers on push and pull requests to `main`.
 
-```bash
-brew install google-cloud-sdk kubectl helm
+1. **Lint** — `golangci-lint` (errcheck, staticcheck, gosimple, unused).
+2. **OpenAPI validation** — `@redocly/cli lint openapi.yaml`.
+3. **Helm lint** — `helm lint` on [deploy/helm/todo-app](deploy/helm/todo-app/) with the bitnami subchart resolved.
+4. **Tests** — unit + integration against a real PostgreSQL service container, with the `-race` flag.
+5. **Docker build & push** — multi-stage builds for `todo-api` and `todo-web`, pushed to `ghcr.io` on `main` with tag `main-<timestamp>-<short-sha>` (the format Flux's image policies match).
 
-gcloud auth login
-gcloud auth application-default login
+After the push, Flux's image automation kicks in (see [Option 3 / Step 3](#option-3--gcp--gke-with-terraform--fluxcd-production-path)).
 
-export GCP_PROJECT=<your-project-id>
-gcloud config set project $GCP_PROJECT
-```
+---
 
-### Step 1. Create GKE cluster
+## Cleanup
 
-```bash
-# Create GCS bucket for Terraform state
-make tf-bootstrap GCP_PROJECT=$GCP_PROJECT
+| Path | Command | What it removes |
+|---|---|---|
+| Docker Compose | `docker compose down` | Stop containers (keep volumes) |
+| Docker Compose | `docker compose down -v` | Stop + drop the Postgres volume |
+| Kind | `make delete-cluster` | Destroy the Kind cluster |
+| Kind | `make clean` | Cluster + local registry + images |
+| GKE | `make tf-destroy GCP_PROJECT=<id>` | Tear down VPC, GKE, static IP, Flux deploy key |
+| VPS | n/a | Run `systemctl stop todo-api`, remove `/opt/todo-api`, `/var/www/todo`, the nginx site config, and (optionally) PostgreSQL — Ansible doesn't have an `uninstall` playbook |
 
-# Init, plan, apply
-make tf-init GCP_PROJECT=$GCP_PROJECT
-make tf-plan GCP_PROJECT=$GCP_PROJECT
-make tf-apply GCP_PROJECT=$GCP_PROJECT
+---
 
-# Configure kubectl
-make tf-kubeconfig GCP_PROJECT=$GCP_PROJECT
+## License
 
-# Verify
-kubectl get nodes
-```
-
-Infrastructure created by Terraform:
-
-| Resource | Details |
-|---|---|
-| VPC | `todo-vpc`, subnet `10.0.0.0/20` |
-| GKE cluster | `todo-cluster`, zonal (`asia-southeast1-b`) |
-| Node pool | `spot-pool`, 1x `e2-medium` Spot VM |
-| Pod CIDR | `10.1.0.0/16` |
-| Service CIDR | `10.2.0.0/20` |
-
-### Step 2. Install NGINX Ingress Controller
-
-```bash
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
-  --create-namespace \
-  --set controller.service.type=LoadBalancer
-```
-
-Wait for External IP:
-
-```bash
-kubectl -n ingress-nginx get svc ingress-nginx-controller -w
-```
-
-Use this IP for `ingress.host` in `values-gcp.yaml` (e.g. `<EXTERNAL-IP>.nip.io`).
-
-### Step 3. Create GHCR pull secret
-
-GKE needs credentials to pull images from GitHub Container Registry:
-
-```bash
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=ghcr.io \
-  --docker-username=<github-user> \
-  --docker-password=<github-pat> \
-  --docker-email=<email>
-```
-
-### Step 4. Deploy with Helm
-
-```bash
-make helm-deploy-gcp
-```
-
-This runs `helm upgrade --install` with `values-gcp.yaml` and automatically sets `image.tag` to the latest commit SHA from the `main` branch.
-
-### Step 5. Verify
-
-```bash
-kubectl get pods
-kubectl get ingress
-curl http://<EXTERNAL-IP>.nip.io/api/v1/healthz
-```
-
-| URL | Service |
-|---|---|
-| `http://<EXTERNAL-IP>.nip.io/web` | Frontend |
-| `http://<EXTERNAL-IP>.nip.io/api` | API |
-| `http://<EXTERNAL-IP>.nip.io/api/docs` | Swagger UI |
-
-### Update application
-
-After pushing new code to `main` and CI builds new images:
-
-```bash
-make helm-deploy-gcp
-```
-
-The tag is resolved automatically from the `main` branch HEAD.
-
-### GCP Makefile targets
-
-| Target | Description |
-|---|---|
-| `make tf-bootstrap` | Create GCS bucket for Terraform state |
-| `make tf-init` | Init Terraform with GCS backend |
-| `make tf-plan` | Plan infrastructure changes |
-| `make tf-apply` | Apply infrastructure changes |
-| `make tf-destroy` | Destroy all GCP infrastructure |
-| `make tf-kubeconfig` | Configure kubectl for GKE |
-| `make helm-deploy-gcp` | Deploy app to GKE with latest main commit |
+[MIT](LICENSE) — feel free to use this as a reference for your own projects.
