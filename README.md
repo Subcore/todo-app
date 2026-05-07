@@ -135,18 +135,49 @@ This is the main production-style deployment. Terraform provisions the GKE clust
 
 - `gcloud` CLI (authenticated: `gcloud auth login && gcloud auth application-default login`)
 - `kubectl`, `helm`, `terraform` ≥ 1.5
-- A GitHub Personal Access Token with `repo` scope (for Flux to clone the repo and for `ghcr-secret`)
 - A GCP project with billing enabled
+- A GitHub Personal Access Token — see Step 0 below
+
+**Step 0 — create a GitHub Personal Access Token**
+
+Terraform uses one token for two things ([terraform/flux.tf](terraform/flux.tf)):
+
+1. The `github` provider creates a repository deploy key that Flux uses to clone and push to this repo (image-automation commits).
+2. The same token is written into a Kubernetes `ghcr-secret` so the cluster can pull `ghcr.io/<owner>/todo-{api,web}` images.
+
+Create a **classic** PAT at https://github.com/settings/tokens/new with these scopes:
+
+| Scope | Why |
+|---|---|
+| `repo` | Manage the deploy key on the repository |
+| `read:packages` | Pull images from GHCR (used in `ghcr-secret`) |
+| `write:packages` | Only needed if you push from this token; CI uses `GITHUB_TOKEN` instead, so usually skip |
+
+> Fine-grained PATs currently don't authenticate against GHCR reliably — use a classic PAT.
+
+Pass the token via an environment variable, **not** through `terraform.tfvars` (the file is gitignored, but it's easy to leak it via screen-shares, backups, or accidental edits to the example file):
+
+```bash
+export TF_VAR_github_token=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+The token ends up in two places after `tf-apply`:
+
+- Terraform state in your GCS bucket — keep that bucket private.
+- The `ghcr-secret` Kubernetes Secret (in `flux-system` and `todo-app` namespaces).
+
+If the token leaks, revoke it on GitHub, then re-export `TF_VAR_github_token` and run `terraform apply` again — the `ghcr-secret` and deploy key get rotated in place.
 
 **Step 1 — provision infrastructure with Terraform**
 
 ```bash
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-# Edit terraform.tfvars and set project_id, then export non-tfvars secrets:
+# Edit terraform.tfvars: set project_id (region/zone are optional).
+# Pass secrets through env vars instead of writing them into terraform.tfvars:
 export TF_VAR_db_password=$(openssl rand -hex 16)
 export TF_VAR_github_owner=<your-gh-user-or-org>
 export TF_VAR_github_repository=todo-app-v2
-export TF_VAR_github_token=<github-pat>
+export TF_VAR_github_token=$GITHUB_PAT_FROM_STEP_0
 
 make tf-bootstrap GCP_PROJECT=<your-project-id>   # creates GCS bucket for tfstate
 make tf-init      GCP_PROJECT=<your-project-id>
