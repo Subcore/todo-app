@@ -47,6 +47,7 @@ ingress:
 # -- встроенный PostgreSQL (Bitnami subchart)
 # Если enabled: true — Helm поставит PostgreSQL сам
 # Если enabled: false — используй db.host для внешней БД
+# NOTE: passwords below are dev-defaults. Override via secret/values-prod.yaml in production.
 postgresql:
   enabled: true
   auth:
@@ -65,6 +66,7 @@ db:
   port: "5432"
   name: todo_db
   user: postgres
+  # Override via secret in production.
   password: postgres
   sslmode: disable
 

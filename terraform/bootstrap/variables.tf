@@ -1,6 +1,5 @@
 variable "project_id" {
-  type    = string
-  default = "YOUR_GCP_PROJECT"
+  type = string
 }
 
 variable "region" {

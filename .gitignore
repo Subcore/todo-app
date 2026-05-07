@@ -3,9 +3,12 @@ bin/
 main
 api
 *.test
+todo-api
 
-# Environment
+# Environment / secrets
 .env
+.env.local
+.env.*.local
 .env.*
 
 # OS
@@ -13,6 +16,8 @@ api
 
 # IDE
 .vscode/
+.claude
+.agents/workflows
 
 # Build
 dist/
@@ -20,20 +25,22 @@ dist/
 # Helm
 deploy/helm/todo-app/charts/*.tgz
 
-README copy.md
-.claude
-.agents/workflows
-
-Small To-Do App.md
-
-todo-api
-
 # Terraform
-**/.terraform/
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
 terraform/**/*.tfstate
-terraform/**/*.tfstate.backup
+terraform/**/*.tfstate.*
 terraform/**/*.tfvars
 !terraform/**/*.tfvars.example
 
+# Ansible
+ansible/inventory.ini
+ansible/inventory.local.ini
+
 # Obsidian
 .obsidian
+
+# Misc
+README copy.md
+Small To-Do App.md
+=

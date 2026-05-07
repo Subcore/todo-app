@@ -9,7 +9,7 @@
     web_dir: /var/www/todo
     app_port: 8080
     web_port: 8081
-    server_ip: YOUR_SERVER_IP
+    server_ip: "{{ ansible_host | default(inventory_hostname) }}"
 
     db_name: todo_db
     db_user: todo

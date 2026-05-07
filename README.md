@@ -386,7 +386,7 @@ Wait for External IP:
 kubectl -n ingress-nginx get svc ingress-nginx-controller -w
 ```
 
-Use this IP for `ingress.host` in `values-gcp.yaml` (e.g. `34.87.120.234.nip.io`).
+Use this IP for `ingress.host` in `values-gcp.yaml` (e.g. `<EXTERNAL-IP>.nip.io`).
 
 ### Step 3. Create GHCR pull secret
 

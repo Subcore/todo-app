@@ -316,8 +316,8 @@ ansible-deploy: ## Run Ansible playbook to deploy to VPS
 deploy-vps: build-linux ansible-deploy ## Full VPS deploy: build binary + run Ansible
 	@echo ""
 	@echo "=== VPS Deployment complete ==="
-	@echo "App: http://YOUR_SERVER_IP"
-	@echo "API: http://YOUR_SERVER_IP/api"
+	@echo "App: http://<server-ip>"
+	@echo "API: http://<server-ip>/api"
 	@echo ""
 
 # ─── GCP deploy ───
@@ -333,7 +333,7 @@ helm-deploy-gcp: ## Deploy to GKE with latest main commit tag
 
 # ─── Terraform GCP ───
 
-GCP_PROJECT ?= YOUR_GCP_PROJECT
+GCP_PROJECT ?= your-gcp-project-id
 
 tf-bootstrap: ## Create GCS bucket for Terraform state
 	cd terraform/bootstrap && terraform init && terraform apply -var="project_id=$(GCP_PROJECT)"

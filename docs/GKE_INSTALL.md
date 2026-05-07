@@ -1,12 +1,12 @@
 # Развёртывание todo-app-v2 в GKE
 
-Пошаговая инструкция для нового GCP-проекта `YOUR_GCP_PROJECT`.
+Пошаговая инструкция для нового GCP-проекта `<your-project-id>`.
 
 ## Что будет создано
 
 | Ресурс | Описание |
 |---|---|
-| GCS bucket | `YOUR_GCP_PROJECT-tfstate` — хранилище Terraform state |
+| GCS bucket | `<your-project-id>-tfstate` — хранилище Terraform state |
 | VPC + Subnet | `todo-vpc`, subnet `gke-subnet` (10.0.0.0/20) + secondary ranges для pods/services |
 | GKE кластер | `todo-cluster`, зональный (asia-southeast1-b), spot-ноды e2-medium |
 | Static IP | `todo-ingress-ip` — внешний адрес для Ingress |
@@ -33,7 +33,7 @@ flux --version        # FluxCD CLI (опционально, для дебага)
 ```bash
 gcloud auth login
 gcloud auth application-default login
-gcloud config set project YOUR_GCP_PROJECT
+gcloud config set project <your-project-id>
 ```
 
 ---
@@ -45,7 +45,7 @@ gcloud services enable \
   storage.googleapis.com \
   compute.googleapis.com \
   container.googleapis.com \
-  --project=YOUR_GCP_PROJECT
+  --project=<your-project-id>
 ```
 
 > Без этого шага Terraform упадёт с ошибкой `googleapi: Error 403: ... has not been used in project`.
@@ -65,12 +65,12 @@ terraform init -upgrade
 terraform apply
 ```
 
-Terraform создаст bucket `YOUR_GCP_PROJECT-tfstate` в `asia-southeast1`.
+Terraform создаст bucket `<your-project-id>-tfstate` в `asia-southeast1`.
 
 **Проверка:**
 ```bash
-gcloud storage ls --project=YOUR_GCP_PROJECT
-# Должен вывести: gs://YOUR_GCP_PROJECT-tfstate/
+gcloud storage ls --project=<your-project-id>
+# Должен вывести: gs://<your-project-id>-tfstate/
 ```
 
 ---
@@ -88,7 +88,7 @@ cd ../   # вернуться в terraform/
 
 # Создать файл с секретными переменными (уже в .gitignore)
 cat > terraform.tfvars <<'EOF'
-project_id         = "YOUR_GCP_PROJECT"
+project_id         = "<your-project-id>"
 github_owner       = "Subcore"
 github_repository  = "todo-app-v2"
 github_token       = "ghp_XXXXXXXXXXXXXXXXXXXX"
@@ -108,7 +108,7 @@ cd terraform/
 # Удалить старый lock если меняли версию провайдера
 rm -f .terraform.lock.hcl
 
-terraform init -backend-config="bucket=YOUR_GCP_PROJECT-tfstate"
+terraform init -backend-config="bucket=<your-project-id>-tfstate"
 ```
 
 > `-backend-config="bucket=..."` — подставляет имя bucket в `backend "gcs"`.
@@ -145,7 +145,7 @@ terraform output kubeconfig_command
 
 gcloud container clusters get-credentials todo-cluster \
   --zone asia-southeast1-b \
-  --project YOUR_GCP_PROJECT
+  --project <your-project-id>
 ```
 
 ---
@@ -250,7 +250,7 @@ cd bootstrap/
 terraform destroy
 
 # Или одной командой через gcloud:
-# gcloud projects delete YOUR_GCP_PROJECT
+# gcloud projects delete <your-project-id>
 ```
 
 ---
