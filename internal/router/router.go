@@ -3,9 +3,9 @@ package router
 import (
 	"os"
 
-	"github.com/Subcore/todo-app-v2/internal/handler"
-	"github.com/Subcore/todo-app-v2/internal/repository"
-	"github.com/Subcore/todo-app-v2/internal/service"
+	"github.com/Subcore/todo-app/internal/handler"
+	"github.com/Subcore/todo-app/internal/repository"
+	"github.com/Subcore/todo-app/internal/service"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

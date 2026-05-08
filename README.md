@@ -2,7 +2,7 @@
 
 A small REST-based todo service built in Go, designed as a portfolio project to showcase a full path from local development to production. The same codebase ships in four ways: Docker Compose for fast iteration, a local Kind cluster for Kubernetes practice, a GKE cluster managed by Terraform with FluxCD running GitOps, and a single-node VPS deployment driven by Ansible.
 
-[![CI](https://github.com/Subcore/todo-app-v2/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/Subcore/todo-app/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/go-1.24.1-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -176,7 +176,7 @@ cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 # Pass secrets through env vars instead of writing them into terraform.tfvars:
 export TF_VAR_db_password=$(openssl rand -hex 16)
 export TF_VAR_github_owner=<your-gh-user-or-org>
-export TF_VAR_github_repository=todo-app-v2
+export TF_VAR_github_repository=todo-app
 export TF_VAR_github_token=$GITHUB_PAT_FROM_STEP_0
 
 make tf-bootstrap GCP_PROJECT=<your-project-id>   # creates GCS bucket for tfstate
@@ -423,7 +423,3 @@ After the push, Flux's image automation kicks in (see [Option 3 / Step 3](#optio
 | VPS | n/a | Run `systemctl stop todo-api`, remove `/opt/todo-api`, `/var/www/todo`, the nginx site config, and (optionally) PostgreSQL — Ansible doesn't have an `uninstall` playbook |
 
 ---
-
-## License
-
-[MIT](LICENSE) — feel free to use this as a reference for your own projects.

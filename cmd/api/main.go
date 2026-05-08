@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Subcore/todo-app-v2/internal/config"
-	"github.com/Subcore/todo-app-v2/internal/router"
+	"github.com/Subcore/todo-app/internal/config"
+	"github.com/Subcore/todo-app/internal/router"
 	"github.com/joho/godotenv"
 )
 

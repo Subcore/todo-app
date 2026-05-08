@@ -1,4 +1,4 @@
-# Развёртывание todo-app-v2 в GKE
+# Развёртывание todo-app в GKE
 
 Пошаговая инструкция для нового GCP-проекта `<your-project-id>`.
 
@@ -90,7 +90,7 @@ cd ../   # вернуться в terraform/
 cat > terraform.tfvars <<'EOF'
 project_id         = "<your-project-id>"
 github_owner       = "Subcore"
-github_repository  = "todo-app-v2"
+github_repository  = "todo-app"
 github_token       = "ghp_XXXXXXXXXXXXXXXXXXXX"
 db_password        = "ПРИДУМАЙ_НАДЁЖНЫЙ_ПАРОЛЬ"
 EOF

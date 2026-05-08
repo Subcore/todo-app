@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Subcore/todo-app-v2/internal/model"
+	"github.com/Subcore/todo-app/internal/model"
 
 	"gorm.io/gorm"
 )

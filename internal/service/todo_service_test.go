@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Subcore/todo-app-v2/internal/model"
-	"github.com/Subcore/todo-app-v2/internal/repository"
+	"github.com/Subcore/todo-app/internal/model"
+	"github.com/Subcore/todo-app/internal/repository"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

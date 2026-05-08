@@ -1,4 +1,4 @@
-# todo-app-v2: Go REST API с PostgreSQL, Kind/GKE Kubernetes и Helm
+# todo-app: Go REST API с PostgreSQL, Kind/GKE Kubernetes и Helm
 
 ## ИСТОРИЯ
 

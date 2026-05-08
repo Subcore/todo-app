@@ -2,7 +2,7 @@
 
 Небольшой REST-сервис для задач на Go, оформленный как портфолио-проект, который проходит весь путь от локальной разработки до продакшена. Один и тот же код разворачивается четырьмя способами: Docker Compose для быстрой итерации, локальный Kind-кластер для практики с Kubernetes, кластер GKE, который провижится через Terraform и обслуживается FluxCD по GitOps-модели, и одно-нодовый VPS-деплой через Ansible.
 
-[![CI](https://github.com/Subcore/todo-app-v2/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/Subcore/todo-app/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/go-1.24.1-00ADD8?logo=go)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
@@ -176,7 +176,7 @@ cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 # Секреты передавайте через env vars, в terraform.tfvars их не пишите:
 export TF_VAR_db_password=$(openssl rand -hex 16)
 export TF_VAR_github_owner=<ваш-gh-user-или-org>
-export TF_VAR_github_repository=todo-app-v2
+export TF_VAR_github_repository=todo-app
 export TF_VAR_github_token=$GITHUB_PAT_FROM_STEP_0
 
 make tf-bootstrap GCP_PROJECT=<ваш-project-id>   # создаёт GCS-бакет под tfstate
@@ -423,7 +423,3 @@ GitHub Actions workflow: [.github/workflows/ci.yml](.github/workflows/ci.yml). �
 | VPS | — | Запустите `systemctl stop todo-api`, удалите `/opt/todo-api`, `/var/www/todo`, конфиг сайта nginx и (опционально) PostgreSQL — отдельного uninstall-плейбука у Ansible нет |
 
 ---
-
-## License
-
-[MIT](LICENSE) — пользуйтесь как референсом для своих проектов.

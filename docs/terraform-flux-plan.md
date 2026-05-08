@@ -94,7 +94,7 @@ variable "github_org" {
 
 variable "github_repository" {
   type        = string
-  default     = "todo-app-v2"
+  default     = "todo-app"
   description = "GitHub repository name"
 }
 ```

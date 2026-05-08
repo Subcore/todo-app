@@ -9,7 +9,7 @@ import (
 
 	"testing"
 
-	"github.com/Subcore/todo-app-v2/internal/router"
+	"github.com/Subcore/todo-app/internal/router"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

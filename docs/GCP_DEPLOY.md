@@ -197,7 +197,7 @@ export GITHUB_USER=<github-username>
 
 flux bootstrap github \
   --owner=$GITHUB_USER \
-  --repository=todo-app-v2 \
+  --repository=todo-app \
   --branch=main \
   --path=clusters/gcp \
   --personal
@@ -228,7 +228,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1m
-  url: https://github.com/<owner>/todo-app-v2
+  url: https://github.com/<owner>/todo-app
   ref:
     branch: main
 ---
@@ -320,7 +320,7 @@ flux logs --follow
 # Установить image-automation контроллеры
 flux bootstrap github \
   --owner=$GITHUB_USER \
-  --repository=todo-app-v2 \
+  --repository=todo-app \
   --branch=main \
   --path=clusters/gcp \
   --components-extra=image-reflector-controller,image-automation-controller \

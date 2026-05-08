@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Subcore/todo-app-v2/internal/model"
-	"github.com/Subcore/todo-app-v2/internal/repository"
+	"github.com/Subcore/todo-app/internal/model"
+	"github.com/Subcore/todo-app/internal/repository"
 )
 
 var (

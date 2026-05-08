@@ -1,4 +1,4 @@
-module github.com/Subcore/todo-app-v2
+module github.com/Subcore/todo-app
 
 go 1.24.1
 
