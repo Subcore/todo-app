@@ -32,7 +32,45 @@ A small REST-based todo service built in Go, designed as a portfolio project to 
 
 ---
 
-## Architecture
+## Application Architecture
+
+The app is split into three independent components behind a single entry point. The frontend is pure static content — it never touches the database directly; all data access goes through the backend API.
+
+```
+                       ┌──────────────┐
+                       │   Browser    │
+                       └──────┬───────┘
+                              │ HTTP
+                              ▼
+                  ┌───────────────────────┐
+                  │      API Gateway      │   single entry point
+                  │  (nginx / k8s ingress)│   routes /web and /api
+                  └─────┬───────────┬─────┘
+                  /web/ │           │ /api/
+                        ▼           ▼
+              ┌─────────────────┐  ┌─────────────────┐
+              │    Frontend     │  │     Backend     │
+              │   (todo-web)    │  │   (todo-api)    │
+              │ static HTML +   │  │  Go + Gin REST  │
+              │ Alpine.js + Tw  │  │      API        │
+              └─────────────────┘  └────────┬────────┘
+                                            │ SQL (only path to DB)
+                                            ▼
+                                   ┌─────────────────┐
+                                   │   PostgreSQL    │
+                                   └─────────────────┘
+```
+
+- **API Gateway** — the only component reachable from the outside. In Compose it's the nginx inside `todo-web`; in Kubernetes it's NGINX Ingress; on a VPS it's the host nginx ([ansible/roles/nginx/templates/todo.conf.j2](ansible/roles/nginx/templates/todo.conf.j2)).
+- **Frontend (`todo-web`)** — static HTML + Alpine.js + Tailwind, served by nginx. Has no database credentials and no DB driver. Talks to the backend over HTTP through the gateway.
+- **Backend (`todo-api`)** — Go/Gin REST service. The only component that holds DB credentials and opens connections to PostgreSQL.
+- **PostgreSQL** — not exposed via the gateway. Reachable only from the backend pod/container on the internal network.
+
+The same three-tier split is preserved in every deployment target (Compose, Kind, GKE, VPS); only the gateway implementation and the DB hosting change.
+
+---
+
+## Deployment Architecture
 
 End-to-end GitOps flow for the GKE deployment:
 
