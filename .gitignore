@@ -44,3 +44,8 @@ ansible/inventory.local.ini
 README copy.md
 Small To-Do App.md
 =
+
+# Dependencies
+node_modules/
+__pycache__/
+.venv/
