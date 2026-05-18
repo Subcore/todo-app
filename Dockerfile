@@ -18,7 +18,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
 
 # Stage 2: Final
-FROM alpine:3.21.3
+FROM alpine:3.21.4
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata
