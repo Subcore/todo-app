@@ -50,6 +50,8 @@ ingress:
 # NOTE: passwords below are dev-defaults. Override via secret/values-prod.yaml in production.
 postgresql:
   enabled: true
+  image:
+    repository: bitnamilegacy/postgresql
   auth:
     username: postgres
     password: postgres
@@ -57,8 +59,7 @@ postgresql:
     database: todo_db
   primary:
     persistence:
-      enabled: true
-      size: 1Gi
+      enabled: false
 
 db:
   # host is overridden automatically when postgresql.enabled=true
