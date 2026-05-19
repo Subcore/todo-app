@@ -38,6 +38,11 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       initContainers:
         - name: wait-for-db
           image: busybox:1.36
@@ -58,6 +63,12 @@ spec:
           ports:
             - containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: {{ include "todo-app.fullname" . }}-config

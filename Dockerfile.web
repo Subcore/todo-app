@@ -2,28 +2,44 @@ FROM nginx:1.27-alpine
 
 ARG GIT_SHA=unknown
 
-# Удаляем дефолтный конфиг
+# Create non-root user with fixed UID/GID 10001 (matches API container)
+RUN addgroup -S -g 10001 appuser && \
+    adduser -S -u 10001 -G appuser -h /app -s /sbin/nologin appuser
+
+# Remove default config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Копируем наш конфиг
+# Copy our config
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Копируем статику
+# Copy static assets
 COPY web/index.html /usr/share/nginx/html/index.html.template
 COPY web/docs.html /usr/share/nginx/html/
 COPY web/assets/ /usr/share/nginx/html/assets/
 
-# Подставляем git commit SHA в шаблон
+# Inject git SHA into the template at build time
 RUN sed -i "s/__GIT_SHA__/${GIT_SHA}/g" /usr/share/nginx/html/index.html.template
 
-# BASE_HREF по умолчанию "/" — для docker-compose
-# В Kubernetes через env переменную выставляется "/web/"
+# Make directories nginx writes to accessible to non-root user.
+# This MUST happen before `USER appuser`, when we still have root privileges.
+RUN chown -R appuser:appuser \
+        /usr/share/nginx/html \
+        /var/cache/nginx \
+        /var/log/nginx \
+    && touch /var/run/nginx.pid \
+    && chown appuser:appuser /var/run/nginx.pid
+
+# BASE_HREF defaults to "/" for docker-compose; overridden to "/web/" in Kubernetes
 ENV BASE_HREF="/"
 
-EXPOSE 80
+# Listen on unprivileged port — non-root users cannot bind below 1024
+EXPOSE 8080
+
+# Switch to non-root user
+USER appuser
 
 HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/ || exit 1
 
-# При старте подставляем BASE_HREF в index.html и запускаем nginx
+# Substitute BASE_HREF at runtime, then start nginx in foreground
 CMD ["/bin/sh", "-c", "envsubst '${BASE_HREF}' < /usr/share/nginx/html/index.html.template > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]

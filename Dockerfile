@@ -36,6 +36,9 @@ COPY --from=builder /app/web/docs.html ./web/docs.html
 COPY --from=builder /app/openapi.yaml ./openapi.yaml
 COPY --from=builder /app/migrations ./migrations
 
+# Make /app owned by appuser so the application can read its own files
+RUN chown -R appuser:appuser /app
+
 # Use the non-root user
 USER appuser
 

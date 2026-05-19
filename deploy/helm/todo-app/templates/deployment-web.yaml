@@ -33,6 +33,11 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       containers:
         - name: {{ .Chart.Name }}-web
           image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
@@ -43,6 +48,12 @@ spec:
           ports:
             - containerPort: {{ .Values.web.service.targetPort }}
               protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
           livenessProbe:
             httpGet:
               path: /
