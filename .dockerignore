@@ -1,9 +1,15 @@
+# Git, env
 .git
+.gitignore
+.dockerignore
 .env
 .env.*
-node_modules
-dist
-postgres_data
+
+# Build artefacts (Go)
+bin/
+main
+api
+todo-api
 *.exe
 *.exe~
 *.dll
@@ -12,8 +18,50 @@ postgres_data
 *.test
 *.out
 vendor/
+coverage.out
+
+# Node / Python (вдруг заведутся)
+node_modules
+dist
 __pycache__/
 .venv
-.DS_Store
+
+# Docker / compose state
+postgres_data
 Dockerfile
+Dockerfile.web
+docker-compose.yaml
 docker-compose.yml
+
+# Terraform — провайдеры, state, vars (особенно tfvars: содержит секреты)
+terraform/**/.terraform/
+terraform/**/.terraform.lock.hcl
+terraform/**/*.tfstate
+terraform/**/*.tfstate.*
+terraform/**/*.tfvars
+!terraform/**/*.tfvars.example
+terraform/bootstrap/
+
+# Ansible — реальный inventory с IP и SSH-путями
+ansible/inventory.ini
+ansible/inventory.local.ini
+
+# Kubernetes / Helm артефакты сборки
+deploy/helm/todo-app/charts/*.tgz
+k8s/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+.claude/
+.agents/
+.obsidian/
+
+# Docs / misc files, не нужные сборке Go-бинаря
+README.md
+README.ru.md
+README.copy.md
+docs/
+*.md
+!cmd/**/*.md
