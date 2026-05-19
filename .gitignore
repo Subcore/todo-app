@@ -11,6 +11,9 @@ todo-api
 .env.*.local
 .env.*
 
+# Database data
+postgres_data
+
 # OS
 .DS_Store
 
