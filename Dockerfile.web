@@ -23,7 +23,7 @@ ENV BASE_HREF="/"
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
 
 # При старте подставляем BASE_HREF в index.html и запускаем nginx
 CMD ["/bin/sh", "-c", "envsubst '${BASE_HREF}' < /usr/share/nginx/html/index.html.template > /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]

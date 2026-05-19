@@ -24,7 +24,8 @@ FROM alpine:3.21.4
 RUN apk add --no-cache ca-certificates tzdata
 
 # Create a non-root user
-RUN adduser -D -g '' appuser
+RUN addgroup -S -g 10001 appuser && \
+  adduser -S -u 10001 -G appuser -h /app -s /sbin/nologin appuser
 
 WORKDIR /app
 
@@ -43,7 +44,7 @@ EXPOSE 8080
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
 
 # Run the binary
 ENTRYPOINT ["./main"]
