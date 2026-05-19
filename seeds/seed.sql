@@ -1,8 +1,16 @@
--- Idempotent seed: insert only when the table is empty
+-- Idempotent seed: skip when the table already has data,
+-- unless :force is set to 'on' (e.g. psql -v force=on / `make seed FORCE=1`).
+\if :{?force}
+\else
+  \set force off
+\endif
+
+SELECT set_config('seed.force', :'force', false);
+
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM todos LIMIT 1) THEN
-    RAISE NOTICE 'Seed skipped: todos table already has data.';
+  IF current_setting('seed.force') <> 'on' AND EXISTS (SELECT 1 FROM todos LIMIT 1) THEN
+    RAISE NOTICE 'Seed skipped: todos table already has data. Re-run with FORCE=1 to insert anyway.';
   ELSE
     INSERT INTO todos (title, completed, due_date, tags, created_at, updated_at)
     SELECT title, completed, due_date, tags, NOW(), NOW()

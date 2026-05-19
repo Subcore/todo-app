@@ -206,17 +206,17 @@ migrate-down: ## Rollback last migration
 		-database="postgres://$(DB_USER):$(DB_PASS)@localhost:$(DB_PORT)/$(DB_NAME)?sslmode=disable" down 1; \
 	kill $$PF_PID 2>/dev/null
 
-seed: ## Load seed data via kubectl exec into the PostgreSQL pod
+seed: ## Load seed data via kubectl exec into the PostgreSQL pod (FORCE=1 to bypass non-empty check)
 	@echo "[seed] Waiting for PostgreSQL pod to be ready..."
 	kubectl wait --for=condition=ready pod \
 		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		--timeout=120s
-	@echo "[seed] Loading seed data..."
+	@echo "[seed] Loading seed data (FORCE=$(if $(FORCE),on,off))..."
 	@PG_POD=$$(kubectl get pod \
 		--selector=app.kubernetes.io/instance=todo,app.kubernetes.io/name=postgresql \
 		-o jsonpath='{.items[0].metadata.name}'); \
 	kubectl cp seeds/seed.sql $$PG_POD:/tmp/seed.sql; \
-	kubectl exec $$PG_POD -- env PGPASSWORD=$(DB_PASS) psql -U $(DB_USER) -d $(DB_NAME) -f /tmp/seed.sql
+	kubectl exec $$PG_POD -- env PGPASSWORD=$(DB_PASS) psql -U $(DB_USER) -d $(DB_NAME) -v force=$(if $(FORCE),on,off) -f /tmp/seed.sql
 
 ensure-hosts: ## Ensure todo.local is in /etc/hosts
 	@echo "[11/11] Checking /etc/hosts for todo.local..."
