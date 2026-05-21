@@ -52,3 +52,5 @@ Small To-Do App.md
 node_modules/
 __pycache__/
 .venv/
+package.json
+package-lock.json
