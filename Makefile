@@ -1,5 +1,5 @@
-IMAGE_NAME     := localhost:5500/todo-api
-WEB_IMAGE_NAME := localhost:5500/todo-web
+IMAGE_NAME     := localhost:6000/todo-api
+WEB_IMAGE_NAME := localhost:6000/todo-web
 GIT_SHA    := $(shell git rev-parse --short HEAD)
 IMAGE_TAG  := $(GIT_SHA)
 CLUSTER_NAME := kind
@@ -7,7 +7,7 @@ HELM_RELEASE := todo
 HELM_CHART   := ./deploy/helm/todo-app
 INGRESS_NGINX_VERSION := v1.12.1
 REGISTRY_NAME := kind-registry
-REGISTRY_PORT := 5500
+REGISTRY_PORT := 6000
 REGISTRY_IMAGE := registry:3
 DB_USER       ?= postgres
 DB_PASS       ?= postgres
@@ -62,7 +62,7 @@ build-image: ## Build Docker image
 		-t $(IMAGE_NAME):latest .
 
 # NOTE: The assignment suggests using `kind load docker-image` to load images into the cluster.
-# We use a local Docker registry (localhost:5500) instead — this approach is closer to a real
+# We use a local Docker registry (localhost:6000) instead — this approach is closer to a real
 # CI/CD pipeline (build once, push to registry, pull anywhere) and avoids re-loading images
 # on every deploy. The registry is connected to the kind network so nodes can pull from it directly.
 create-registry: ## Create local Docker registry if not running
@@ -71,7 +71,7 @@ create-registry: ## Create local Docker registry if not running
 		echo "  Registry '$(REGISTRY_NAME)' already running, skipping."; \
 	else \
 		echo "  Starting local Docker registry on port $(REGISTRY_PORT)..."; \
-		docker run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):5000" --network bridge --name $(REGISTRY_NAME) $(REGISTRY_IMAGE); \
+		docker run -d --restart=always -p "127.0.0.1:$(REGISTRY_PORT):6000" -e REGISTRY_HTTP_ADDR=0.0.0.0:6000 --network bridge --name $(REGISTRY_NAME) $(REGISTRY_IMAGE); \
 	fi
 
 create-cluster: ## Create kind cluster if it does not exist
@@ -98,7 +98,7 @@ configure-registry: ## Configure registry access on kind nodes
 	@for node in $$(kind get nodes --name $(CLUSTER_NAME)); do \
 		echo "  Configuring node: $$node"; \
 		docker exec $$node mkdir -p /etc/containerd/certs.d/localhost:$(REGISTRY_PORT); \
-		printf '[host."http://$(REGISTRY_NAME):5500"]\n  capabilities = ["pull", "resolve", "push"]\n' \
+		printf '[host."http://$(REGISTRY_NAME):6000"]\n  capabilities = ["pull", "resolve", "push"]\n' \
 			| docker exec -i $$node cp /dev/stdin /etc/containerd/certs.d/localhost:$(REGISTRY_PORT)/hosts.toml; \
 	done
 

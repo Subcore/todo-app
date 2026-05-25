@@ -137,7 +137,7 @@ make deploy-kind      # одна команда — 11 шагов
 
 Что делает `make deploy-kind`:
 
-1. Поднимает локальный Docker registry на `localhost:5500`
+1. Поднимает локальный Docker registry на `localhost:6000`
 2. Создаёт Kind-кластер (control-plane + worker)
 3. Подключает registry к сети Kind
 4. Настраивает containerd на каждой ноде, чтобы он тянул из этого registry
