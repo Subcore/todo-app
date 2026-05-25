@@ -137,7 +137,7 @@ make deploy-kind      # one-shot 11-step pipeline
 
 What `make deploy-kind` does:
 
-1. Spawns a local Docker registry on `localhost:5000`
+1. Spawns a local Docker registry on `localhost:5500`
 2. Creates the Kind cluster (control-plane + worker)
 3. Connects the registry to Kind's network
 4. Configures containerd on each node to pull from the registry

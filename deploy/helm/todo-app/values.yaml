@@ -1,5 +1,5 @@
 image:
-  repository: localhost:5000/todo-api
+  repository: localhost:5500/todo-api
   tag: latest
   pullPolicy: Always
 
@@ -18,7 +18,7 @@ service:
 web:
   baseHref: "/web/"
   image:
-    repository: localhost:5000/todo-web
+    repository: localhost:5500/todo-web
     tag: latest
     pullPolicy: Always
   replicaCount: 1
