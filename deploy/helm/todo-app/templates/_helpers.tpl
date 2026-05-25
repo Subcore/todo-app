@@ -18,7 +18,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Определяет хост БД: если subchart включён — имя сервиса subchart, иначе — db.host из values
+Defines the DB host: if subchart is enabled — subchart service name, otherwise — db.host from values
 */}}
 {{- define "todo-app.dbHost" -}}
 {{- if .Values.postgresql.enabled -}}
