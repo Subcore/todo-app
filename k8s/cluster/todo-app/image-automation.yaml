@@ -71,7 +71,7 @@ spec:
         email: fluxcdbot@users.noreply.github.com
       messageTemplate: "chore: update images to {{range .Changed.Changes}}{{print .NewValue}} {{end}}"
     push:
-      branch: main
+      branch: flux-image-updates
   update:
     path: ./k8s/cluster
     strategy: Setters
