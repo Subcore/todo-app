@@ -69,6 +69,10 @@ spec:
     web:
       image:
         tag: "main-20260601T142953-d5ea4c5" # {"$imagepolicy": "flux-system:todo-web:tag"}
+    postgresql:
+      enabled: false
+    db:
+      host: todo-postgresql
   valuesFrom:
     - kind: ConfigMap
       name: todo-app-values
