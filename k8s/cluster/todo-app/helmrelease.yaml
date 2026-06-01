@@ -68,7 +68,7 @@ spec:
       tag: "main-20260601T171417-18a10a4" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
-        tag: "main-20260601T170828-f5d819c" # {"$imagepolicy": "flux-system:todo-web:tag"}
+        tag: "main-20260601T171417-18a10a4" # {"$imagepolicy": "flux-system:todo-web:tag"}
     postgresql:
       enabled: false
     db:
