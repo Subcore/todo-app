@@ -27,6 +27,7 @@ dist/
 
 # Helm
 deploy/helm/todo-app/charts/*.tgz
+deploy/helm/todo-app/Chart.lock
 
 # Terraform
 terraform/**/.terraform/

@@ -37,7 +37,7 @@ web:
       cpu: 50m
       memory: 32Mi
 
-enableSwagger: true
+enableSwagger: false
 
 ingress:
   enabled: true
