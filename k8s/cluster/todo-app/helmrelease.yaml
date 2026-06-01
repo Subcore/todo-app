@@ -65,7 +65,7 @@ spec:
   values:
     # Image tags managed by Flux image automation (inline for setter markers)
     image:
-      tag: "main-20260601T172948-606a9bf" # {"$imagepolicy": "flux-system:todo-api:tag"}
+      tag: "main-20260601T173714-4d54a18" # {"$imagepolicy": "flux-system:todo-api:tag"}
     web:
       image:
         tag: "main-20260601T172948-606a9bf" # {"$imagepolicy": "flux-system:todo-web:tag"}
