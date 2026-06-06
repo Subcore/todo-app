@@ -33,6 +33,13 @@ spec:
                 sleep 2
               done
               echo "PostgreSQL is ready!"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
         - name: copy-migrations
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           command: ["cp", "-r", "/app/migrations/.", "/migrations/"]
