@@ -65,10 +65,10 @@ spec:
   values:
     # Image tags are updated by CI (.github/workflows/ci.yml) on push to main.
     image:
-      tag: "main-20260601T150953-3c2ee57"
+      tag: "main-20260607T055340-46cf3c0"
     web:
       image:
-        tag: "main-20260601T150953-3c2ee57"
+        tag: "main-20260607T055340-46cf3c0"
     postgresql:
       enabled: false
     db:
@@ -85,9 +85,3 @@ spec:
       valuesKey: password
       targetPath: db.password
       optional: false
-values:
-  image:
-    tag: main-20260607T055340-46cf3c0
-  web:
-    image:
-      tag: main-20260607T055340-46cf3c0

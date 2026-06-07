@@ -176,8 +176,8 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
         run: |
           yq -i '
-            (select(.kind == "HelmRelease" and .metadata.name == "todo-app").values.image.tag) = strenv(TAG) |
-            (select(.kind == "HelmRelease" and .metadata.name == "todo-app").values.web.image.tag) = strenv(TAG)
+            (select(.kind == "HelmRelease" and .metadata.name == "todo-app").spec.values.image.tag) = strenv(TAG) |
+            (select(.kind == "HelmRelease" and .metadata.name == "todo-app").spec.values.web.image.tag) = strenv(TAG)
           ' k8s/cluster/todo-app/helmrelease.yaml
 
       - name: Commit and push
