@@ -87,7 +87,7 @@ spec:
       optional: false
 values:
   image:
-    tag: main-20260607T054355-19f5a88
+    tag: main-20260607T055340-46cf3c0
   web:
     image:
-      tag: main-20260607T054355-19f5a88
+      tag: main-20260607T055340-46cf3c0
