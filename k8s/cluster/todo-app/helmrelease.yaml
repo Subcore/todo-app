@@ -85,3 +85,9 @@ spec:
       valuesKey: password
       targetPath: db.password
       optional: false
+values:
+  image:
+    tag: main-20260607T054355-19f5a88
+  web:
+    image:
+      tag: main-20260607T054355-19f5a88
