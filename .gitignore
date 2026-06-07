@@ -18,9 +18,10 @@ postgres_data
 .DS_Store
 
 # IDE
-.vscode/
+.vscode
 .claude
-.agents/workflows
+.agents
+skills-lock.json
 
 # Build
 dist/
@@ -58,3 +59,6 @@ __pycache__/
 .venv/
 package.json
 package-lock.json
+
+
+README.v2.md

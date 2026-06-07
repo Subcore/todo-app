@@ -6,4 +6,3 @@ resources:
   - todo-app/namespace.yaml
   - todo-app/values.yaml
   - todo-app/helmrelease.yaml
-  - todo-app/image-automation.yaml
